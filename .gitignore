@@ -1,0 +1,5 @@
+# 本番DB接続情報（公開リポジトリに載せない）
+config.php
+
+# macOS
+.DS_Store
