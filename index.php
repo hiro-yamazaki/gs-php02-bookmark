@@ -63,6 +63,21 @@
             </form>
         </div>
     </main>
+
+    <!-- ページ間ナビ（→で積読ストックへ） -->
+    <a href="select.php" class="page-nav page-nav--right" aria-label="積読ストックを見る">
+        <span class="page-nav-circle"><i class="fas fa-chevron-right"></i></span>
+        <span class="page-nav-label">積読を見る</span>
+    </a>
+
+    <script>
+        // キーボードの→でも移動できる（入力中は無効）
+        document.addEventListener('keydown', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (e.key === 'ArrowRight') location.href = 'select.php';
+        });
+    </script>
 </body>
 
 </html>

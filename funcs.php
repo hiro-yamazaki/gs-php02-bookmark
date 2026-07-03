@@ -7,9 +7,11 @@ function h($str){
 }
 
 //DB接続（接続情報をここ1箇所に集約）
-//本番サーバーでは config.php（git管理外）を置けばそちらの接続情報が使われる
+//本番サーバー（さくら等）では config.php（git管理外）の接続情報を使う
+//ローカルのMac（開発機）では config.php があっても常にMAMPへ接続する
 function db_conn(){
-    if (file_exists(__DIR__ . '/config.php')) {
+    $is_local = (PHP_OS_FAMILY === 'Darwin'); //Mac＝ローカル開発機
+    if (!$is_local && file_exists(__DIR__ . '/config.php')) {
         //本番用（さくらサーバー等）
         $c = require __DIR__ . '/config.php';
     } else {
@@ -21,7 +23,8 @@ function db_conn(){
         ];
     }
     try {
-        return new PDO($c['dsn'], $c['user'], $c['pass']);
+        //接続できない時に長時間待たないよう5秒でタイムアウト
+        return new PDO($c['dsn'], $c['user'], $c['pass'], [PDO::ATTR_TIMEOUT => 5]);
     } catch (PDOException $e) {
         exit('DBConnectError:' . $e->getMessage());
     }

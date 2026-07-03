@@ -128,6 +128,21 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
             </div>
         </div>
     </main>
+
+    <!-- ページ間ナビ（←でブックマーク登録へ） -->
+    <a href="index.php" class="page-nav page-nav--left" aria-label="ブックマーク登録へ戻る">
+        <span class="page-nav-circle"><i class="fas fa-chevron-left"></i></span>
+        <span class="page-nav-label">登録へ</span>
+    </a>
+
+    <script>
+        // キーボードの←でも移動できる（入力中は無効）
+        document.addEventListener('keydown', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (e.key === 'ArrowLeft') location.href = 'index.php';
+        });
+    </script>
 </body>
 
 </html>
