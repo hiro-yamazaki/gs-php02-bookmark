@@ -3,6 +3,8 @@
 G's ACADEMY DEV31 PHP02（PHP & DB）の課題。
 **本をブックマークするDB＋登録ページ** です。
 
+🌐 **公開URL**: https://hr-frameworks.sakura.ne.jp/php02_hw/
+
 「気になった瞬間に貯めておく。積読は資産。」をコンセプトに、
 課題仕様（gs_bm_table）はそのままに、積読を見える化する機能を足しています。
 
