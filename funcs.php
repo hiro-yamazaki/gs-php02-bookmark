@@ -1,6 +1,11 @@
 <?php
 //共通に使う関数を記述
 
+//Amazonアソシエイトのトラッキングタグ（例: 'xxxx-22'）
+//アソシエイト審査に承認されたらここに設定する。
+//設定すると「本を探す」で生成されるAmazonリンクが自動でアフィリエイトURLになる。
+const AMAZON_ASSOCIATE_TAG = '';
+
 //XSS対応（ echoする場所で使用！それ以外はNG ）
 function h($str){
     return htmlspecialchars($str, ENT_QUOTES,'UTF-8');

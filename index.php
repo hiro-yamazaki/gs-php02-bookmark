@@ -39,7 +39,13 @@
                     <label for="book_name" class="form-label">
                         <i class="fas fa-book"></i> 書籍名
                     </label>
-                    <input type="text" id="book_name" name="book_name" class="form-input" placeholder="例：リーダブルコード" maxlength="64" required>
+                    <div class="name-search-row">
+                        <input type="text" id="book_name" name="book_name" class="form-input" placeholder="例：リーダブルコード" maxlength="64" required>
+                        <button type="button" id="bookSearchBtn" class="book-search-btn">
+                            <i class="fas fa-search"></i> 本を探す
+                        </button>
+                    </div>
+                    <div id="bookSuggest" class="book-suggest" hidden></div>
                 </div>
 
                 <div class="form-group">
@@ -76,6 +82,67 @@
             const tag = e.target.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.key === 'ArrowRight') location.href = 'select.php';
+        });
+
+        // 書籍検索（search.php経由でGoogle Books APIを利用）
+        // 候補をクリックすると書籍名とURLが自動入力される
+        const searchBtn = document.getElementById('bookSearchBtn');
+        const nameInput = document.getElementById('book_name');
+        const urlInput = document.getElementById('book_url');
+        const suggestBox = document.getElementById('bookSuggest');
+
+        searchBtn.addEventListener('click', async () => {
+            const q = nameInput.value.trim();
+            if (!q) { nameInput.focus(); return; }
+            searchBtn.disabled = true;
+            searchBtn.textContent = '検索中…';
+            try {
+                const res = await fetch('search.php?q=' + encodeURIComponent(q));
+                const data = await res.json();
+                suggestBox.hidden = false;
+                suggestBox.replaceChildren();
+                if (!data.items.length) {
+                    suggestBox.textContent = '見つかりませんでした。別の書名でお試しください。';
+                    return;
+                }
+                data.items.forEach((item) => {
+                    const row = document.createElement('div');
+                    row.className = 'book-suggest-item';
+                    row.tabIndex = 0;
+                    if (item.thumbnail) {
+                        const img = document.createElement('img');
+                        img.src = item.thumbnail;
+                        img.alt = '';
+                        img.onerror = () => img.remove(); //表紙画像がない本はサムネ非表示
+                        row.appendChild(img);
+                    }
+                    const meta = document.createElement('div');
+                    meta.className = 'book-suggest-meta';
+                    const title = document.createElement('div');
+                    title.className = 'book-suggest-title';
+                    title.textContent = item.title;
+                    const author = document.createElement('div');
+                    author.className = 'book-suggest-author';
+                    author.textContent = item.authors;
+                    meta.append(title, author);
+                    row.appendChild(meta);
+                    const pick = () => {
+                        nameInput.value = item.title.slice(0, 64);
+                        urlInput.value = item.url;
+                        suggestBox.hidden = true;
+                        document.getElementById('book_comment').focus();
+                    };
+                    row.addEventListener('click', pick);
+                    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(); });
+                    suggestBox.appendChild(row);
+                });
+            } catch (err) {
+                suggestBox.hidden = false;
+                suggestBox.textContent = '検索でエラーが発生しました。時間をおいてお試しください。';
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="fas fa-search"></i> 本を探す';
+            }
         });
     </script>
 </body>
