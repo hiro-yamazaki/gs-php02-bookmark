@@ -100,10 +100,17 @@
         const pickedPreview = document.getElementById('pickedPreview');
         const pickedCover = document.getElementById('pickedCover');
 
-        // 表紙画像が存在しない場合はプレビューを隠し、登録もしない
+        // 表紙画像が存在しない場合（読込エラー or 1x1のダミー画像）は
+        // プレビューを隠し、登録もしない
         pickedCover.addEventListener('error', () => {
             pickedPreview.hidden = true;
             imageInput.value = '';
+        });
+        pickedCover.addEventListener('load', () => {
+            if (pickedCover.naturalWidth < 2) {
+                pickedPreview.hidden = true;
+                imageInput.value = '';
+            }
         });
 
         searchBtn.addEventListener('click', async () => {
@@ -128,7 +135,9 @@
                         const img = document.createElement('img');
                         img.src = item.thumbnail;
                         img.alt = '';
-                        img.onerror = () => img.remove(); //表紙画像がない本はサムネ非表示
+                        //表紙がない本（読込エラー or 1x1のダミー画像）はサムネ非表示
+                        img.onerror = () => img.remove();
+                        img.onload = () => { if (img.naturalWidth < 2) img.remove(); };
                         row.appendChild(img);
                     }
                     const meta = document.createElement('div');

@@ -35,7 +35,7 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   $view .= '<div class="data-item">';
   // 表紙（画像がない本は本のアイコンを表示）
   if ($img !== '' && preg_match('#\Ahttps://#i', $img)) {
-    $view .= '<div class="data-cover"><img src="'.h($img).'" alt="" loading="lazy" onerror="this.closest(\'.data-cover\').classList.add(\'data-cover--empty\');this.remove()"></div>';
+    $view .= '<div class="data-cover"><img src="'.h($img).'" alt="" loading="lazy" onerror="coverFail(this)" onload="if(this.naturalWidth<2)coverFail(this)"></div>';
   } else {
     $view .= '<div class="data-cover data-cover--empty"></div>';
   }
@@ -57,6 +57,14 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
     <title>📚 積読ストック - ブックマーク一覧</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
+    <script>
+        // 表紙が読み込めない・実体がない(1x1画像)場合は📚プレースホルダーに切り替える
+        function coverFail(img) {
+            const box = img.parentNode;
+            box.className = 'data-cover data-cover--empty';
+            img.remove();
+        }
+    </script>
 </head>
 
 <body>

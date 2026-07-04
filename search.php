@@ -32,6 +32,12 @@ function isbn10_to_13(string $isbn10): ?string {
     return $body . ((10 - $sum % 10) % 10);
 }
 
+// ISBN-10からAmazonの書影（表紙画像）URLを組み立てる
+// 表紙が存在しない本は1x1の透明画像が返る（フロント側でnaturalWidth判定して除外）
+function amazon_img(string $isbn10): string {
+    return 'https://images-na.ssl-images-amazon.com/images/P/' . $isbn10 . '.09.MZZZZZZZ.jpg';
+}
+
 // ISBNからAmazonのURLを組み立てる（タグ設定時はアフィリエイトURLになる）
 function amazon_url(string $isbn10, string $isbn13, string $fallback): string {
     if ($isbn10 !== '') {
@@ -98,7 +104,7 @@ function search_ndl(string $q): array {
         $items[] = [
             'title'     => $title,
             'authors'   => trim((string)$item->author),
-            'thumbnail' => $isbn13 !== '' ? 'https://ndlsearch.ndl.go.jp/thumbnail/' . $isbn13 . '.jpg' : '',
+            'thumbnail' => $isbn10 !== '' ? amazon_img($isbn10) : '', //NDLの書影は直リンク不可(403)のためAmazon書影を使う
             'url'       => $url,
         ];
     }
@@ -135,7 +141,7 @@ function search_google(string $q): array {
         $items[] = [
             'title'     => (string)($v['title'] ?? ''),
             'authors'   => implode(', ', $v['authors'] ?? []),
-            'thumbnail' => str_replace('http://', 'https://', $thumb),
+            'thumbnail' => $isbn10 !== '' ? amazon_img($isbn10) : str_replace('http://', 'https://', $thumb),
             'url'       => $url,
         ];
     }
