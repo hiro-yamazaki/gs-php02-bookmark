@@ -31,11 +31,20 @@ $view = "";
 $hit = 0;
 while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   $hit++;
+  $img = trim((string)($result['image_url'] ?? ''));
   $view .= '<div class="data-item">';
+  // 表紙（画像がない本は本のアイコンを表示）
+  if ($img !== '' && preg_match('#\Ahttps://#i', $img)) {
+    $view .= '<div class="data-cover"><img src="'.h($img).'" alt="" loading="lazy" onerror="this.closest(\'.data-cover\').classList.add(\'data-cover--empty\');this.remove()"></div>';
+  } else {
+    $view .= '<div class="data-cover data-cover--empty"></div>';
+  }
+  $view .= '<div class="data-body">';
   $view .= '<div class="data-date"><i class="fas fa-clock"></i> '.h($result['created_at']).'</div>';
   $view .= '<div class="data-name"><i class="fas fa-book"></i> '.h($result['book_name']).'</div>';
   $view .= '<div class="data-content">'.nl2br(h($result['book_comment'])).'</div>';
   $view .= '<div class="data-url"><i class="fas fa-link"></i> <a href="'.h($result['book_url']).'" target="_blank" rel="noopener noreferrer">'.h($result['book_url']).'</a></div>';
+  $view .= '</div>';
   $view .= '</div>';
 }
 ?>

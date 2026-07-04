@@ -14,6 +14,8 @@ G's ACADEMY DEV31 PHP02（PHP & DB）の課題。
 - 📖 **本を探す**: 書籍名から候補を検索し、**Amazon商品ページのURLを自動入力**
   （国立国会図書館サーチAPI→Google Books APIの2段構え・どちらもキー不要。
   取得したISBNからAmazonのURLを組み立てる。API連携は第6回授業の応用）
+- 🖼 **表紙表示**: 「本を探す」で選んだ本は表紙画像も保存され、一覧がミニ本棚になる
+  （表紙は国立国会図書館の書影API。画像がない本は📚プレースホルダー）
 - 📚 一覧表示（新しい順）
 - 🔍 **検索**: 書籍名・コメントの部分一致（授業で習った `LIKE '%〜%'` を応用）
 - 📊 **集計バー**: 積読ストック数 / 今週の追加数 / 表示中件数（`COUNT` と `SUM(条件)` で集計）
@@ -49,6 +51,7 @@ select.php（一覧・検索・集計）… ヘッダーのリンクから移動
 | book_name | varchar(64) | 書籍名 |
 | book_url | text | 書籍URL |
 | book_comment | text | 書籍コメント |
+| image_url | text | 表紙画像URL（任意。「本を探す」で自動設定） |
 | created_at | datetime | 登録日時（INSERT時に `NOW()` で自動設定） |
 
 DB・テーブルの作成は `setup.sql` を phpMyAdmin のSQLタブで実行（サンプルデータ3件つき）。

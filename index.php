@@ -46,6 +46,12 @@
                         </button>
                     </div>
                     <div id="bookSuggest" class="book-suggest" hidden></div>
+                    <!-- 選択した本の表紙URL（「本を探す」で自動設定・一覧に表紙が出る） -->
+                    <input type="hidden" id="book_image" name="book_image">
+                    <div id="pickedPreview" class="picked-preview" hidden>
+                        <img id="pickedCover" src="" alt="選択した本の表紙">
+                        <span>この表紙も一緒に登録されます</span>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -90,6 +96,15 @@
         const nameInput = document.getElementById('book_name');
         const urlInput = document.getElementById('book_url');
         const suggestBox = document.getElementById('bookSuggest');
+        const imageInput = document.getElementById('book_image');
+        const pickedPreview = document.getElementById('pickedPreview');
+        const pickedCover = document.getElementById('pickedCover');
+
+        // 表紙画像が存在しない場合はプレビューを隠し、登録もしない
+        pickedCover.addEventListener('error', () => {
+            pickedPreview.hidden = true;
+            imageInput.value = '';
+        });
 
         searchBtn.addEventListener('click', async () => {
             const q = nameInput.value.trim();
@@ -129,6 +144,15 @@
                     const pick = () => {
                         nameInput.value = item.title.slice(0, 64);
                         urlInput.value = item.url;
+                        imageInput.value = item.thumbnail || '';
+                        // 選んだ本の表紙をプレビュー表示
+                        if (item.thumbnail) {
+                            pickedCover.src = item.thumbnail;
+                            pickedPreview.hidden = false;
+                        } else {
+                            pickedCover.removeAttribute('src');
+                            pickedPreview.hidden = true;
+                        }
                         suggestBox.hidden = true;
                         document.getElementById('book_comment').focus();
                     };

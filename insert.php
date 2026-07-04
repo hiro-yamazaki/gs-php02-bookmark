@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $book_name    = trim($_POST['book_name'] ?? '');
 $book_url     = trim($_POST['book_url'] ?? '');
 $book_comment = trim($_POST['book_comment'] ?? '');
+$book_image   = trim($_POST['book_image'] ?? ''); //表紙画像URL（任意・「本を探す」で自動設定）
 
 // 入力チェック（未入力・書籍名64文字超はフォームへ戻す）
 if ($book_name === '' || $book_url === '' || $book_comment === '' || mb_strlen($book_name) > 64) {
@@ -23,14 +24,20 @@ if (!preg_match('#\Ahttps?://#i', $book_url)) {
     exit;
 }
 
+// 表紙URLは任意項目。https以外や長すぎるものは捨てて本文だけ登録する
+if ($book_image !== '' && (!preg_match('#\Ahttps://#i', $book_image) || mb_strlen($book_image) > 500)) {
+    $book_image = '';
+}
+
 // 1. DB接続（funcs.phpの共通関数。ローカル/本番はconfig.phpの有無で切替）
 $pdo = db_conn();
 
 // 2. SQL作成（バインド変数でSQLインジェクション対策）
-$stmt = $pdo->prepare('INSERT INTO gs_bm_table (book_name, book_url, book_comment, created_at) VALUES (:book_name, :book_url, :book_comment, NOW())');
+$stmt = $pdo->prepare('INSERT INTO gs_bm_table (book_name, book_url, book_comment, image_url, created_at) VALUES (:book_name, :book_url, :book_comment, :image_url, NOW())');
 $stmt->bindValue(':book_name', $book_name, PDO::PARAM_STR);
 $stmt->bindValue(':book_url', $book_url, PDO::PARAM_STR);
 $stmt->bindValue(':book_comment', $book_comment, PDO::PARAM_STR);
+$stmt->bindValue(':image_url', $book_image, PDO::PARAM_STR);
 
 // 3. 実行（PHP8はSQLエラー時に例外が飛ぶのでcatchする）
 try {
