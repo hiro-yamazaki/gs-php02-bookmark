@@ -7,6 +7,11 @@
     box-sizing: border-box;
 }
 
+/* hidden属性は display 指定（flex等）より常に優先させる */
+[hidden] {
+    display: none !important;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);

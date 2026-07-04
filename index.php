@@ -115,20 +115,60 @@
             pickedCover.style.opacity = '1';
         });
 
-        searchBtn.addEventListener('click', async () => {
+        // ---- 検索と自動入力 ----
+        let urlAutoFilled = false; //URL欄を自動入力で埋めたか（手入力は上書きしない）
+        let searchTimer = null;
+        let lastQuery = '';
+
+        // URLを手で書いたら、以後は自動入力で上書きしない
+        urlInput.addEventListener('input', () => { urlAutoFilled = false; });
+
+        // 書籍名の入力が止まったら自動検索 → URL欄が空なら先頭候補で自動入力
+        nameInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            const q = nameInput.value.trim();
+            if (q.length < 2) return;
+            searchTimer = setTimeout(() => runSearch(q, true), 600);
+        });
+
+        searchBtn.addEventListener('click', () => {
             const q = nameInput.value.trim();
             if (!q) { nameInput.focus(); return; }
-            searchBtn.disabled = true;
-            searchBtn.textContent = '検索中…';
+            runSearch(q, false);
+        });
+
+        // 選んだ本の表紙をプレビュー表示（読み込み完了までは透明）
+        function showPreviewCover(thumbnail) {
+            if (thumbnail) {
+                pickedCover.style.opacity = '0';
+                pickedCover.style.transition = 'opacity 0.2s ease';
+                pickedCover.src = thumbnail;
+                pickedPreview.hidden = false;
+            } else {
+                pickedCover.removeAttribute('src');
+                pickedPreview.hidden = true;
+            }
+        }
+
+        async function runSearch(q, auto) {
+            if (auto && q === lastQuery) return; //同じ語での再検索はしない
+            lastQuery = q;
+            if (!auto) {
+                searchBtn.disabled = true;
+                searchBtn.textContent = '検索中…';
+            }
             try {
                 const res = await fetch('search.php?q=' + encodeURIComponent(q));
                 const data = await res.json();
-                suggestBox.hidden = false;
+                if (nameInput.value.trim() !== q) return; //入力が進んでいたら古い結果は捨てる
                 suggestBox.replaceChildren();
                 if (!data.items.length) {
+                    if (auto) { suggestBox.hidden = true; return; } //入力中は静かに閉じる
+                    suggestBox.hidden = false;
                     suggestBox.textContent = '見つかりませんでした。別の書名でお試しください。';
                     return;
                 }
+                suggestBox.hidden = false;
                 data.items.forEach((item) => {
                     const row = document.createElement('div');
                     row.className = 'book-suggest-item';
@@ -162,16 +202,9 @@
                         nameInput.value = item.title.slice(0, 64);
                         urlInput.value = item.url;
                         imageInput.value = item.thumbnail || '';
-                        // 選んだ本の表紙をプレビュー表示（読み込み完了までは透明）
-                        if (item.thumbnail) {
-                            pickedCover.style.opacity = '0';
-                            pickedCover.style.transition = 'opacity 0.2s ease';
-                            pickedCover.src = item.thumbnail;
-                            pickedPreview.hidden = false;
-                        } else {
-                            pickedCover.removeAttribute('src');
-                            pickedPreview.hidden = true;
-                        }
+                        urlAutoFilled = true; //書籍名を変えたら追従してよい
+                        lastQuery = nameInput.value.trim();
+                        showPreviewCover(item.thumbnail);
                         suggestBox.hidden = true;
                         document.getElementById('book_comment').focus();
                     };
@@ -179,14 +212,26 @@
                     row.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(); });
                     suggestBox.appendChild(row);
                 });
+                // URL欄が空（or 前回の自動入力のまま）なら先頭候補で自動入力
+                if (auto && (urlInput.value.trim() === '' || urlAutoFilled)) {
+                    const first = data.items[0];
+                    urlInput.value = first.url;
+                    imageInput.value = first.thumbnail || '';
+                    urlAutoFilled = true;
+                    showPreviewCover(first.thumbnail);
+                }
             } catch (err) {
-                suggestBox.hidden = false;
-                suggestBox.textContent = '検索でエラーが発生しました。時間をおいてお試しください。';
+                if (!auto) {
+                    suggestBox.hidden = false;
+                    suggestBox.textContent = '検索でエラーが発生しました。時間をおいてお試しください。';
+                }
             } finally {
-                searchBtn.disabled = false;
-                searchBtn.innerHTML = '<i class="fas fa-search"></i> 本を探す';
+                if (!auto) {
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = '<i class="fas fa-search"></i> 本を探す';
+                }
             }
-        });
+        }
     </script>
 </body>
 
