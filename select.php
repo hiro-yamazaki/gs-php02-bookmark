@@ -35,7 +35,7 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   $view .= '<div class="data-item">';
   // 表紙（画像がない本は本のアイコンを表示）
   if ($img !== '' && preg_match('#\Ahttps://#i', $img)) {
-    $view .= '<div class="data-cover"><img src="'.h($img).'" alt="" loading="lazy" onerror="coverFail(this)" onload="if(this.naturalWidth<2)coverFail(this)"></div>';
+    $view .= '<div class="data-cover"><img src="'.h($img).'" alt="" loading="lazy" onerror="coverFail(this)" onload="if(this.naturalWidth<2){coverFail(this)}else{this.classList.add(\'loaded\')}"></div>';
   } else {
     $view .= '<div class="data-cover data-cover--empty"></div>';
   }

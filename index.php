@@ -49,7 +49,7 @@
                     <!-- 選択した本の表紙URL（「本を探す」で自動設定・一覧に表紙が出る） -->
                     <input type="hidden" id="book_image" name="book_image">
                     <div id="pickedPreview" class="picked-preview" hidden>
-                        <img id="pickedCover" src="" alt="選択した本の表紙">
+                        <img id="pickedCover" alt="選択した本の表紙">
                         <span>この表紙も一緒に登録されます</span>
                     </div>
                 </div>
@@ -110,7 +110,9 @@
             if (pickedCover.naturalWidth < 2) {
                 pickedPreview.hidden = true;
                 imageInput.value = '';
+                return;
             }
+            pickedCover.style.opacity = '1';
         });
 
         searchBtn.addEventListener('click', async () => {
@@ -133,11 +135,17 @@
                     row.tabIndex = 0;
                     if (item.thumbnail) {
                         const img = document.createElement('img');
-                        img.src = item.thumbnail;
                         img.alt = '';
+                        //読み込み成功までは透明にして、壊れた画像アイコンを見せない
+                        img.style.opacity = '0';
+                        img.style.transition = 'opacity 0.2s ease';
                         //表紙がない本（読込エラー or 1x1のダミー画像）はサムネ非表示
                         img.onerror = () => img.remove();
-                        img.onload = () => { if (img.naturalWidth < 2) img.remove(); };
+                        img.onload = () => {
+                            if (img.naturalWidth < 2) { img.remove(); return; }
+                            img.style.opacity = '1';
+                        };
+                        img.src = item.thumbnail;
                         row.appendChild(img);
                     }
                     const meta = document.createElement('div');
@@ -154,8 +162,10 @@
                         nameInput.value = item.title.slice(0, 64);
                         urlInput.value = item.url;
                         imageInput.value = item.thumbnail || '';
-                        // 選んだ本の表紙をプレビュー表示
+                        // 選んだ本の表紙をプレビュー表示（読み込み完了までは透明）
                         if (item.thumbnail) {
+                            pickedCover.style.opacity = '0';
+                            pickedCover.style.transition = 'opacity 0.2s ease';
                             pickedCover.src = item.thumbnail;
                             pickedPreview.hidden = false;
                         } else {
