@@ -21,8 +21,9 @@ function db_conn(){
         $c = require __DIR__ . '/config.php';
     } else {
         //ローカル用（MAMP） Password:MAMP='root',XAMPP=''
+        //※このMacのMAMPは標準ポート設定（MySQL=3306）。MAMPデフォルトに戻したら8889に変更
         $c = [
-            'dsn'  => 'mysql:dbname=gs_bookmark_db;charset=utf8mb4;host=127.0.0.1;port=8889',
+            'dsn'  => 'mysql:dbname=gs_bookmark_db;charset=utf8mb4;host=127.0.0.1;port=3306',
             'user' => 'root',
             'pass' => 'root',
         ];
