@@ -1,7 +1,7 @@
 <?php
 // 書籍検索API（フロントとの中継役）
-// 書誌データは ①国立国会図書館サーチAPI → ②Google Books API の順で取得
-// （どちらもAPIキー不要。①が混雑時は②へ自動フォールバック）
+// 書誌データは ①Google Books API（関連度順） → 候補が少なければ ②国立国会図書館サーチAPI で補完
+// （どちらもAPIキー不要。NDLは五十音順で返るため関連度の出るGoogleを主役にしている）
 // URLは ISBN から組み立てた Amazon商品ページ を優先して返す。
 // Amazonアソシエイト承認後は funcs.php の AMAZON_ASSOCIATE_TAG を設定するだけで
 // 生成されるURLがアフィリエイトリンクになる。
@@ -57,9 +57,10 @@ function http_get(string $url): ?string {
     return $res === false ? null : $res;
 }
 
-// ①国立国会図書館サーチAPI（日本の書籍に強い・ISBN付き）
+// 国立国会図書館サーチAPI（日本の書籍に強い・ISBN付き）
+// ※結果は関連度順ではなく五十音順で返るため、補完役として使う
 function search_ndl(string $q): array {
-    $api = 'https://ndlsearch.ndl.go.jp/api/opensearch?' . http_build_query(['title' => $q, 'cnt' => 10]);
+    $api = 'https://ndlsearch.ndl.go.jp/api/opensearch?' . http_build_query(['title' => $q, 'cnt' => 20]);
     // NDLの同時アクセス制限(429)は短時間で解けるため、1秒待って1回だけ再試行する
     $xml = null;
     for ($try = 0; $try < 2; $try++) {
@@ -80,6 +81,11 @@ function search_ndl(string $q): array {
     foreach ($xml->channel->item as $item) {
         $title = trim((string)$item->title);
         if ($title === '' || isset($seen[$title])) continue; //同名の版違いはまとめる
+
+        // 雑誌・記事・映像資料などは除外して「図書」だけにする
+        $cats = [];
+        foreach ($item->category as $c) { $cats[] = (string)$c; }
+        if ($cats && !in_array('図書', $cats, true)) continue;
 
         // dc:identifier(xsi:type=dcndl:ISBN) からISBNを取得
         $isbn10 = '';
@@ -111,7 +117,7 @@ function search_ndl(string $q): array {
     return $items;
 }
 
-// ②Google Books API（フォールバック）
+// Google Books API（関連度順で返るため主役として使う）
 function search_google(string $q): array {
     $api = 'https://www.googleapis.com/books/v1/volumes?' . http_build_query([
         'q'          => 'intitle:' . $q,
@@ -154,11 +160,12 @@ if ($q === '' || mb_strlen($q) > 100) {
     exit;
 }
 
-$items = search_ndl($q);
-// NDLは同名タイトルをまとめるため、正確な書名だと候補が1件だけになりがち。
-// 候補が少ないときはGoogle Booksの結果も合流させて選択肢を増やす
+// ①Google Books（関連度順＝人気の版が上に来る）を主役に
+$items = search_google($q);
+// ②候補が少ないときは国会図書館サーチで補完
+//   （NDLは五十音順で返り関連度が低いものが混ざるため、あくまで補完役）
 if (count($items) < 5) {
-    $items = array_merge($items, search_google($q));
+    $items = array_merge($items, search_ndl($q));
 }
 
 // 同じ本の重複を除去（URL=Amazonの商品ページ=ISBN単位なのでキーに使える）

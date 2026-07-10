@@ -128,7 +128,7 @@
             clearTimeout(searchTimer);
             const q = nameInput.value.trim();
             if (q.length < 2) return;
-            searchTimer = setTimeout(() => runSearch(q, true), 600);
+            searchTimer = setTimeout(() => runSearch(q, true), 900); //間隔を空けて検索APIのレート制限を避ける
         });
 
         // 書籍名の欄でEnter → 登録ではなく「本を探す」を実行する
