@@ -44,6 +44,16 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   $view .= '<div class="data-name"><i class="fas fa-book"></i> '.h($result['book_name']).'</div>';
   $view .= '<div class="data-content">'.nl2br(h($result['book_comment'])).'</div>';
   $view .= '<div class="data-url"><i class="fas fa-link"></i> <a href="'.h($result['book_url']).'" target="_blank" rel="noopener noreferrer">'.h($result['book_url']).'</a></div>';
+  // 編集・削除ボタン（削除は誤操作防止に確認ダイアログを挟む）
+  // 書名はjson_encodeでJS文字列化してからh()する（'や"を含む書名でもJSが壊れない）
+  $confirm = h(json_encode('「' . $result['book_name'] . '」を削除しますか？', JSON_UNESCAPED_UNICODE));
+  $view .= '<div class="data-actions">';
+  $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
+  $view .= '<form method="POST" action="delete.php" class="delete-form" onsubmit="return confirm('.$confirm.')">';
+  $view .= '<input type="hidden" name="id" value="'.(int)$result['id'].'">';
+  $view .= '<button type="submit" class="delete-btn"><i class="fas fa-trash"></i> 削除</button>';
+  $view .= '</form>';
+  $view .= '</div>';
   $view .= '</div>';
   $view .= '</div>';
 }

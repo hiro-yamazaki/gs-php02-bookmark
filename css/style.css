@@ -656,3 +656,69 @@ body {
         height: 74px;
     }
 }
+
+/* ======================
+   編集・削除ボタン（select.php用）
+   ====================== */
+.data-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.edit-btn,
+.delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.edit-btn {
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.1);
+    border: 1px solid rgba(20, 184, 166, 0.4);
+}
+
+.edit-btn:hover {
+    background: rgba(20, 184, 166, 0.2);
+    transform: translateY(-1px);
+}
+
+.delete-form {
+    display: inline;
+    margin: 0;
+}
+
+.delete-btn {
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.18);
+    transform: translateY(-1px);
+}
+
+/* 編集画面の「変更せずに戻る」リンク（detail.php用） */
+.form-cancel {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.9rem;
+}
+
+.form-cancel a {
+    color: #0f766e;
+    text-decoration: none;
+}
+
+.form-cancel a:hover {
+    text-decoration: underline;
+}
