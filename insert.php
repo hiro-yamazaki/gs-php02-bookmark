@@ -12,8 +12,8 @@ $book_url     = trim($_POST['book_url'] ?? '');
 $book_comment = trim($_POST['book_comment'] ?? '');
 $book_image   = trim($_POST['book_image'] ?? ''); //表紙画像URL（任意・「本を探す」で自動設定）
 
-// 入力チェック（未入力・書籍名64文字超はフォームへ戻す）
-if ($book_name === '' || $book_url === '' || $book_comment === '' || mb_strlen($book_name) > 64) {
+// 入力チェック（書籍名・URLは必須、コメントは任意。書籍名64文字超もフォームへ戻す）
+if ($book_name === '' || $book_url === '' || mb_strlen($book_name) > 64) {
     header('Location: index.php');
     exit;
 }

@@ -707,6 +707,19 @@ body {
     transform: translateY(-1px);
 }
 
+/* 任意項目バッジ（フォームのラベル横） */
+.form-optional {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+    vertical-align: middle;
+}
+
 /* 編集画面の「変更せずに戻る」リンク（detail.php用） */
 .form-cancel {
     text-align: center;

@@ -19,8 +19,8 @@ if (!ctype_digit($id)) {
     exit;
 }
 
-//入力チェック（insert.phpと同じ基準。問題があれば編集画面へ戻す）
-if ($book_name === '' || $book_url === '' || $book_comment === '' || mb_strlen($book_name) > 64) {
+//入力チェック（insert.phpと同じ基準。書籍名・URLは必須、コメントは任意）
+if ($book_name === '' || $book_url === '' || mb_strlen($book_name) > 64) {
     header('Location: detail.php?id=' . (int)$id);
     exit;
 }

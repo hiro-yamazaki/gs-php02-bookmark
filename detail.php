@@ -87,10 +87,10 @@ if ($result === false) {
 
                 <div class="form-group">
                     <label for="book_comment" class="form-label">
-                        <i class="fas fa-comment"></i> 書籍コメント
+                        <i class="fas fa-comment"></i> 書籍コメント <span class="form-optional">任意</span>
                     </label>
                     <!-- textareaはvalue属性が使えないので、タグの間に初期値を書く -->
-                    <textarea id="book_comment" name="book_comment" class="form-textarea" required><?= h($result['book_comment']) ?></textarea>
+                    <textarea id="book_comment" name="book_comment" class="form-textarea"><?= h($result['book_comment']) ?></textarea>
                 </div>
 
                 <button type="submit" class="submit-btn">

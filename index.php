@@ -63,9 +63,9 @@
 
                 <div class="form-group">
                     <label for="book_comment" class="form-label">
-                        <i class="fas fa-comment"></i> 書籍コメント
+                        <i class="fas fa-comment"></i> 書籍コメント <span class="form-optional">任意</span>
                     </label>
-                    <textarea id="book_comment" name="book_comment" class="form-textarea" placeholder="読みたい理由やメモを書いておきましょう..." required></textarea>
+                    <textarea id="book_comment" name="book_comment" class="form-textarea" placeholder="読みたい理由やメモがあれば（あとから編集でも書けます）"></textarea>
                 </div>
 
                 <button type="submit" class="submit-btn">
