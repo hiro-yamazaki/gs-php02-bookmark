@@ -115,7 +115,7 @@ function search_ndl(string $q): array {
 function search_google(string $q): array {
     $api = 'https://www.googleapis.com/books/v1/volumes?' . http_build_query([
         'q'          => 'intitle:' . $q,
-        'maxResults' => 5,
+        'maxResults' => 10,
         'printType'  => 'books',
         'country'    => 'JP',
     ]);
@@ -155,13 +155,24 @@ if ($q === '' || mb_strlen($q) > 100) {
 }
 
 $items = search_ndl($q);
-if (count($items) === 0) {
-    $items = search_google($q);
+// NDLは同名タイトルをまとめるため、正確な書名だと候補が1件だけになりがち。
+// 候補が少ないときはGoogle Booksの結果も合流させて選択肢を増やす
+if (count($items) < 5) {
+    $items = array_merge($items, search_google($q));
 }
+
+// 同じ本の重複を除去（URL=Amazonの商品ページ=ISBN単位なのでキーに使える）
+$seen = [];
+$items = array_values(array_filter($items, function ($it) use (&$seen) {
+    $key = $it['url'];
+    if (isset($seen[$key])) return false;
+    $seen[$key] = true;
+    return true;
+}));
 
 // 入力語をタイトルに含む候補を上位へ（NDLの曖昧マッチ対策）
 usort($items, function ($a, $b) use ($q) {
     return (int)(mb_strpos($b['title'], $q) !== false) - (int)(mb_strpos($a['title'], $q) !== false);
 });
 
-echo json_encode(['items' => array_slice($items, 0, 5)], JSON_UNESCAPED_UNICODE);
+echo json_encode(['items' => array_slice($items, 0, 8)], JSON_UNESCAPED_UNICODE);
