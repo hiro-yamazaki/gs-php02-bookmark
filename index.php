@@ -131,6 +131,14 @@
             searchTimer = setTimeout(() => runSearch(q, true), 600);
         });
 
+        // 書籍名の欄でEnter → 登録ではなく「本を探す」を実行する
+        // （日本語入力の変換確定Enterでは発動しないようにisComposingを見る）
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+            e.preventDefault(); //フォーム送信（登録）を止める
+            searchBtn.click();
+        });
+
         searchBtn.addEventListener('click', () => {
             const q = nameInput.value.trim();
             if (!q) { nameInput.focus(); return; }
