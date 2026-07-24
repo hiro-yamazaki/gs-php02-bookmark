@@ -35,3 +35,41 @@ function db_conn(){
         exit('DBConnectError:' . $e->getMessage());
     }
 }
+
+// ======================================================
+// ログイン関連（課題4で追加）
+// セッションIDを「鍵」として使い、ログイン状態を管理する。
+// ※これらを呼ぶページは、先頭で session_start() を実行しておくこと
+// ======================================================
+
+//ログインチェック（ログインが必要なページの先頭で呼ぶ）
+//  未ログイン、またはブラウザとサーバーのセッションIDが一致しない場合は
+//  ログイン画面へ戻す（＝ログインしていないと中身は見られない）
+function loginCheck(){
+    if (!isset($_SESSION['chk_ssid']) || $_SESSION['chk_ssid'] !== session_id()) {
+        header('Location: login.php');
+        exit;
+    }
+    //正しいログイン中は、毎回セッションIDを作り替えて盗用（セッションハイジャック）に備える
+    session_regenerate_id(true);
+    $_SESSION['chk_ssid'] = session_id();
+}
+
+//管理者チェック（loginCheck()の後に呼ぶ。kanri_flg=1以外は一覧へ戻す）
+//  削除など「管理者だけに許可したい処理」の先頭で使う
+function adminCheck(){
+    if ((int)($_SESSION['kanri_flg'] ?? 0) !== 1) {
+        header('Location: select.php');
+        exit;
+    }
+}
+
+//ログイン中かどうかを返す（リダイレクトはしない。画面の出し分け用）
+function isLoggedIn(){
+    return isset($_SESSION['chk_ssid']) && $_SESSION['chk_ssid'] === session_id();
+}
+
+//管理者としてログイン中かどうかを返す（削除ボタンの出し分け用）
+function isAdmin(){
+    return isLoggedIn() && (int)($_SESSION['kanri_flg'] ?? 0) === 1;
+}

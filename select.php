@@ -1,5 +1,12 @@
 <?php
+session_start();
 require_once('funcs.php');
+
+//ログイン状態を判定（一覧はログイン不要で見られるが、状態で表示を出し分ける）
+$loggedIn = isLoggedIn();
+$admin    = isAdmin();
+//「登録へ」の遷移先：ログイン中は登録フォーム、未ログインはログイン画面へ
+$addHref  = $loggedIn ? 'index.php' : 'login.php';
 
 //1. DB接続（funcs.phpの共通関数。ローカル/本番はconfig.phpの有無で切替）
 $pdo = db_conn();
@@ -47,16 +54,23 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $view .= '<div class="data-content">'.nl2br(h($result['book_comment'])).'</div>';
   }
   $view .= '<div class="data-url"><i class="fas fa-link"></i> <a href="'.h($result['book_url']).'" target="_blank" rel="noopener noreferrer">'.h($result['book_url']).'</a></div>';
-  // 編集・削除ボタン（削除は誤操作防止に確認ダイアログを挟む）
-  // 書名はjson_encodeでJS文字列化してからh()する（'や"を含む書名でもJSが壊れない）
-  $confirm = h(json_encode('「' . $result['book_name'] . '」を削除しますか？', JSON_UNESCAPED_UNICODE));
-  $view .= '<div class="data-actions">';
-  $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
-  $view .= '<form method="POST" action="delete.php" class="delete-form" onsubmit="return confirm('.$confirm.')">';
-  $view .= '<input type="hidden" name="id" value="'.(int)$result['id'].'">';
-  $view .= '<button type="submit" class="delete-btn"><i class="fas fa-trash"></i> 削除</button>';
-  $view .= '</form>';
-  $view .= '</div>';
+  // 編集・削除ボタン（ログイン状態で出し分け）
+  //   ・編集：ログイン中のユーザーに表示
+  //   ・削除：管理者(kanri_flg=1)だけに表示（権限分岐）。誤操作防止に確認ダイアログを挟む
+  //   ・未ログイン：操作ボタンは出さず、閲覧のみにする
+  if ($loggedIn) {
+    $view .= '<div class="data-actions">';
+    $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
+    if ($admin) {
+      // 書名はjson_encodeでJS文字列化してからh()する（'や"を含む書名でもJSが壊れない）
+      $confirm = h(json_encode('「' . $result['book_name'] . '」を削除しますか？', JSON_UNESCAPED_UNICODE));
+      $view .= '<form method="POST" action="delete.php" class="delete-form" onsubmit="return confirm('.$confirm.')">';
+      $view .= '<input type="hidden" name="id" value="'.(int)$result['id'].'">';
+      $view .= '<button type="submit" class="delete-btn"><i class="fas fa-trash"></i> 削除</button>';
+      $view .= '</form>';
+    }
+    $view .= '</div>';
+  }
   $view .= '</div>';
   $view .= '</div>';
 }
@@ -92,10 +106,28 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>
-            <a href="index.php" class="nav-link">
-                <i class="fas fa-plus"></i>
-                ブックマーク登録
-            </a>
+            <?php if ($loggedIn): ?>
+                <div class="nav-actions">
+                    <span class="nav-user">
+                        <i class="fas fa-user-circle"></i>
+                        <?= h($_SESSION['lid'] ?? '') ?>さん
+                        <?php if ($admin): ?><span class="nav-badge">管理者</span><?php endif; ?>
+                    </span>
+                    <a href="index.php" class="nav-link">
+                        <i class="fas fa-plus"></i>
+                        ブックマーク登録
+                    </a>
+                    <a href="logout.php" class="nav-link nav-link--ghost">
+                        <i class="fas fa-right-from-bracket"></i>
+                        ログアウト
+                    </a>
+                </div>
+            <?php else: ?>
+                <a href="login.php" class="nav-link">
+                    <i class="fas fa-right-to-bracket"></i>
+                    ログイン
+                </a>
+            <?php endif; ?>
         </div>
     </header>
 
@@ -159,10 +191,10 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
         </div>
     </main>
 
-    <!-- ページ間ナビ（←でブックマーク登録へ） -->
-    <a href="index.php" class="page-nav page-nav--left" aria-label="ブックマーク登録へ戻る">
+    <!-- ページ間ナビ（←でブックマーク登録へ。未ログイン時はログイン画面へ誘導） -->
+    <a href="<?= $addHref ?>" class="page-nav page-nav--left" aria-label="ブックマーク登録へ戻る">
         <span class="page-nav-circle"><i class="fas fa-chevron-left"></i></span>
-        <span class="page-nav-label">登録へ</span>
+        <span class="page-nav-label"><?= $loggedIn ? '登録へ' : 'ログイン' ?></span>
     </a>
 
     <script>
@@ -170,7 +202,7 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
         document.addEventListener('keydown', (e) => {
             const tag = e.target.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-            if (e.key === 'ArrowLeft') location.href = 'index.php';
+            if (e.key === 'ArrowLeft') location.href = '<?= $addHref ?>';
         });
     </script>
 </body>

@@ -1,3 +1,8 @@
+<?php
+session_start();
+require_once('funcs.php');
+loginCheck(); //ログインしていない人は登録フォームを見られない（ログイン必要ページ）
+?>
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -21,10 +26,21 @@
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>
-            <a href="select.php" class="nav-link">
-                <i class="fas fa-list"></i>
-                積読を見る
-            </a>
+            <div class="nav-actions">
+                <span class="nav-user">
+                    <i class="fas fa-user-circle"></i>
+                    <?= h($_SESSION['lid'] ?? '') ?>さん
+                    <?php if (isAdmin()): ?><span class="nav-badge">管理者</span><?php endif; ?>
+                </span>
+                <a href="select.php" class="nav-link">
+                    <i class="fas fa-list"></i>
+                    積読を見る
+                </a>
+                <a href="logout.php" class="nav-link nav-link--ghost">
+                    <i class="fas fa-right-from-bracket"></i>
+                    ログアウト
+                </a>
+            </div>
         </div>
     </header>
 

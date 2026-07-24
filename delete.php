@@ -1,5 +1,8 @@
 <?php
+session_start();
 require_once('funcs.php');
+loginCheck(); //ログインしていない人は削除できない（ログイン必要ページ）
+adminCheck(); //さらに削除は管理者(kanri_flg=1)だけに許可する（権限分岐）
 
 //POSTデータ取得（削除ボタン以外から開かれた場合は一覧へ戻す）
 //※DBの中身を書き換える処理なのでGETではなくPOSTで受ける

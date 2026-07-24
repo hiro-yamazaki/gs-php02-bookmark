@@ -1,5 +1,7 @@
 <?php
+session_start();
 require_once('funcs.php');
+loginCheck(); //ログインしていない人は編集画面を見られない（ログイン必要ページ）
 
 //一覧から ?id=◯ で編集対象を受け取る（数字以外・未指定は一覧へ戻す）
 $id = $_GET['id'] ?? '';
@@ -52,10 +54,21 @@ if ($result === false) {
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>
-            <a href="select.php" class="nav-link">
-                <i class="fas fa-list"></i>
-                積読を見る
-            </a>
+            <div class="nav-actions">
+                <span class="nav-user">
+                    <i class="fas fa-user-circle"></i>
+                    <?= h($_SESSION['lid'] ?? '') ?>さん
+                    <?php if (isAdmin()): ?><span class="nav-badge">管理者</span><?php endif; ?>
+                </span>
+                <a href="select.php" class="nav-link">
+                    <i class="fas fa-list"></i>
+                    積読を見る
+                </a>
+                <a href="logout.php" class="nav-link nav-link--ghost">
+                    <i class="fas fa-right-from-bracket"></i>
+                    ログアウト
+                </a>
+            </div>
         </div>
     </header>
 

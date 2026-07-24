@@ -1,5 +1,7 @@
 <?php
+session_start();
 require_once('funcs.php');
+loginCheck(); //ログインしていない人は登録処理をさせない（ログイン必要ページ）
 
 // POSTデータ取得（フォーム以外から開かれた場合はフォームへ戻す）
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
