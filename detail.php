@@ -14,8 +14,11 @@ if (!ctype_digit($id)) {
 $pdo = db_conn();
 
 //2. SQL作成（WHEREで編集対象の1件だけ取得。バインド変数でSQLインジェクション対策）
-$stmt = $pdo->prepare('SELECT * FROM gs_bm_table WHERE id = :id');
+//   user_id も条件に入れて、自分のブックマークしか編集画面を開けないようにする。
+//   （他人のidを ?id= に入れられても、下の「対象データなし」で一覧へ戻る）
+$stmt = $pdo->prepare('SELECT * FROM gs_bm_table WHERE id = :id AND user_id = :user_id');
 $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
+$stmt->bindValue(':user_id', currentUserId(), PDO::PARAM_INT);
 
 //3. 実行（PHP8はSQLエラー時に例外が飛ぶのでcatchする）
 try {
@@ -104,6 +107,14 @@ if ($result === false) {
                     </label>
                     <!-- textareaはvalue属性が使えないので、タグの間に初期値を書く -->
                     <textarea id="book_comment" name="book_comment" class="form-textarea"><?= h($result['book_comment']) ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-check">
+                        <input type="checkbox" name="is_public" value="1" <?= (int)$result['is_public'] === 1 ? 'checked' : '' ?>>
+                        <span><i class="fas fa-earth-asia"></i> この本を他の利用者にも公開する</span>
+                    </label>
+                    <p class="form-help">チェックを外すと自分だけが見られる状態（非公開）になります。</p>
                 </div>
 
                 <button type="submit" class="submit-btn">

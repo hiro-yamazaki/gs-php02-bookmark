@@ -14,6 +14,8 @@ $book_name    = trim($_POST['book_name'] ?? '');
 $book_url     = trim($_POST['book_url'] ?? '');
 $book_comment = trim($_POST['book_comment'] ?? '');
 $book_image   = trim($_POST['book_image'] ?? '');
+//公開設定（チェックが無ければ非公開）
+$is_public    = isset($_POST['is_public']) ? 1 : 0;
 
 //idは数字のみ許可（hiddenはデベロッパーツールで書き換えられる前提で検証する）
 if (!ctype_digit($id)) {
@@ -42,12 +44,17 @@ if ($book_image !== '' && (!preg_match('#\Ahttps://#i', $book_image) || mb_strle
 $pdo = db_conn();
 
 //2. SQL作成（UPDATEは必ずWHEREとセット！ WHEREを忘れると全レコードが書き換わる大事故になる）
-$stmt = $pdo->prepare('UPDATE gs_bm_table SET book_name = :book_name, book_url = :book_url, book_comment = :book_comment, image_url = :image_url WHERE id = :id');
+//   WHERE に user_id も入れるのが要点。
+//   idだけで絞ると、hiddenのidを他人のものに書き換えるだけで他人のブックマークを
+//   編集できてしまう。持ち主が一致する行だけを対象にする。
+$stmt = $pdo->prepare('UPDATE gs_bm_table SET book_name = :book_name, book_url = :book_url, book_comment = :book_comment, image_url = :image_url, is_public = :is_public WHERE id = :id AND user_id = :user_id');
 $stmt->bindValue(':book_name', $book_name, PDO::PARAM_STR);
 $stmt->bindValue(':book_url', $book_url, PDO::PARAM_STR);
 $stmt->bindValue(':book_comment', $book_comment, PDO::PARAM_STR);
 $stmt->bindValue(':image_url', $book_image, PDO::PARAM_STR);
+$stmt->bindValue(':is_public', $is_public, PDO::PARAM_INT);
 $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
+$stmt->bindValue(':user_id', currentUserId(), PDO::PARAM_INT);
 
 //3. 実行（PHP8はSQLエラー時に例外が飛ぶのでcatchする）
 try {

@@ -3,32 +3,53 @@ session_start();
 require_once('funcs.php');
 loginCheck(); //一覧もログインしていない人には見せない（ログイン必要ページ）
 
-//削除ボタンの出し分けに使う（管理者だけに表示する）
 $admin   = isAdmin();
+$uid     = currentUserId();
 //「登録へ」の遷移先（ここまで来ている＝ログイン済みなので登録フォームへ）
 $addHref = 'index.php';
 
 //1. DB接続（funcs.phpの共通関数。ローカル/本番はconfig.phpの有無で切替）
 $pdo = db_conn();
 
-//2. 検索キーワードを受け取る（未指定なら全件表示）
+//2. 検索キーワードと表示範囲を受け取る
 $q = trim($_GET['q'] ?? '');
+//   mine   = 自分の本棚（既定）
+//   public = 他の利用者が公開している本棚
+//   ※想定外の値が来たら mine に倒す（勝手に他人のデータを出さない）
+$scope = ($_GET['scope'] ?? 'mine') === 'public' ? 'public' : 'mine';
 
 //3. データ取得SQL作成（新しい順）
 //   検索時は 書籍名 or コメント の部分一致（授業で習ったLIKE検索）
 //   ※PHP8はSQLエラー時に例外が飛ぶのでcatchする
 try {
+  //表示範囲の条件をここで決める。
+  //  自分の本棚 : 公開/非公開にかかわらず自分の行すべて
+  //  みんなの本棚: is_public=1 かつ 自分以外の行（自分の分は「マイ本棚」で見られるため）
+  if ($scope === 'public') {
+    $scopeSql = 'b.is_public = 1 AND b.user_id <> :uid';
+  } else {
+    $scopeSql = 'b.user_id = :uid';
+  }
+  //持ち主の名前を出したいので gs_user_table と結合する
+  $sql = "SELECT b.*, u.lid AS owner_lid FROM gs_bm_table b JOIN gs_user_table u ON u.id = b.user_id WHERE {$scopeSql}";
   if ($q !== '') {
-    $stmt = $pdo->prepare("SELECT * FROM gs_bm_table WHERE book_name LIKE :q OR book_comment LIKE :q ORDER BY id DESC");
+    $sql .= " AND (b.book_name LIKE :q OR b.book_comment LIKE :q)";
+  }
+  $sql .= " ORDER BY b.id DESC";
+
+  $stmt = $pdo->prepare($sql);
+  $stmt->bindValue(':uid', $uid, PDO::PARAM_INT);
+  if ($q !== '') {
     // % と _ はLIKEの特殊文字なのでエスケープしてからバインド
     $stmt->bindValue(':q', '%' . addcslashes($q, '\\%_') . '%', PDO::PARAM_STR);
-  } else {
-    $stmt = $pdo->prepare("SELECT * FROM gs_bm_table ORDER BY id DESC");
   }
   $stmt->execute();
 
-  //4. 集計（積読の見える化）: 全体の冊数と直近7日の追加数
-  $stat = $pdo->query("SELECT COUNT(*) AS total, COALESCE(SUM(created_at >= NOW() - INTERVAL 7 DAY), 0) AS week_cnt FROM gs_bm_table")->fetch(PDO::FETCH_ASSOC);
+  //4. 集計（積読の見える化）: 自分の冊数・直近7日の追加数・公開中の冊数
+  $statStmt = $pdo->prepare("SELECT COUNT(*) AS total, COALESCE(SUM(created_at >= NOW() - INTERVAL 7 DAY), 0) AS week_cnt, COALESCE(SUM(is_public = 1), 0) AS public_cnt FROM gs_bm_table WHERE user_id = :uid");
+  $statStmt->bindValue(':uid', $uid, PDO::PARAM_INT);
+  $statStmt->execute();
+  $stat = $statStmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
   exit('ErrorQuery:' . $e->getMessage());
 }
@@ -46,8 +67,19 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   } else {
     $view .= '<div class="data-cover data-cover--empty"></div>';
   }
+  $isMine   = ((int)$result['user_id'] === $uid);
+  $isPublic = ((int)$result['is_public'] === 1);
   $view .= '<div class="data-body">';
-  $view .= '<div class="data-date"><i class="fas fa-clock"></i> '.h($result['created_at']).'</div>';
+  $view .= '<div class="data-date"><i class="fas fa-clock"></i> '.h($result['created_at']);
+  // 自分の本には公開状態を、他人の本には持ち主を表示する
+  if ($isMine) {
+    $view .= $isPublic
+      ? ' <span class="data-badge data-badge--public"><i class="fas fa-earth-asia"></i> 公開中</span>'
+      : ' <span class="data-badge"><i class="fas fa-lock"></i> 非公開</span>';
+  } else {
+    $view .= ' <span class="data-badge"><i class="fas fa-user"></i> '.h($result['owner_lid']).'さん</span>';
+  }
+  $view .= '</div>';
   $view .= '<div class="data-name"><i class="fas fa-book"></i> '.h($result['book_name']).'</div>';
   // コメントは任意項目なので、空のときは行ごと出さない
   if (trim((string)$result['book_comment']) !== '') {
@@ -55,12 +87,14 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
   }
   $view .= '<div class="data-url"><i class="fas fa-link"></i> <a href="'.h($result['book_url']).'" target="_blank" rel="noopener noreferrer">'.h($result['book_url']).'</a></div>';
   // 編集・削除ボタン
-  //   ・編集：ログイン中のユーザーに表示（このページはログイン必須）
-  //   ・削除：管理者(kanri_flg=1)だけに表示（権限分岐）。誤操作防止に確認ダイアログを挟む
-  {
+  //   ・編集：自分のブックマークだけ（他人の公開分は閲覧のみ）
+  //   ・削除：自分のブックマーク、または管理者(kanri_flg=1)。誤操作防止に確認ダイアログを挟む
+  if ($isMine || $admin) {
     $view .= '<div class="data-actions">';
-    $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
-    if ($admin) {
+    if ($isMine) {
+      $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
+    }
+    if ($isMine || $admin) {
       // 書名はjson_encodeでJS文字列化してからh()する（'や"を含む書名でもJSが壊れない）
       $confirm = h(json_encode('「' . $result['book_name'] . '」を削除しますか？', JSON_UNESCAPED_UNICODE));
       $view .= '<form method="POST" action="delete.php" class="delete-form" onsubmit="return confirm('.$confirm.')">';
@@ -129,7 +163,7 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
             <h1 class="page-title">📚 積読ストック</h1>
             <p class="page-subtitle">貯めた本を見える化して、次の一冊を決めよう</p>
 
-            <!-- 集計バー -->
+            <!-- 集計バー（数字はすべて自分の本棚のもの） -->
             <div class="stats-bar">
                 <div class="stat-item">
                     <span class="stat-number"><?= (int)$stat['total'] ?></span>
@@ -140,19 +174,35 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     <span class="stat-label">今週の追加</span>
                 </div>
                 <div class="stat-item">
+                    <span class="stat-number"><?= (int)$stat['public_cnt'] ?></span>
+                    <span class="stat-label">公開中</span>
+                </div>
+                <div class="stat-item">
                     <span class="stat-number"><?= $hit ?></span>
                     <span class="stat-label">表示中</span>
                 </div>
             </div>
 
+            <!-- 表示範囲の切り替え（自分の本棚／他の利用者の公開分） -->
+            <div class="scope-tabs">
+                <a href="select.php" class="scope-tab<?= $scope === 'mine' ? ' is-active' : '' ?>">
+                    <i class="fas fa-book-bookmark"></i> マイ本棚
+                </a>
+                <a href="select.php?scope=public" class="scope-tab<?= $scope === 'public' ? ' is-active' : '' ?>">
+                    <i class="fas fa-earth-asia"></i> みんなの本棚
+                </a>
+            </div>
+
             <!-- 検索フォーム（授業で習ったLIKE検索） -->
             <form method="GET" action="select.php" class="search-form">
+                <!-- 検索しても表示範囲が「マイ本棚／みんなの本棚」から切り替わらないよう引き継ぐ -->
+                <input type="hidden" name="scope" value="<?= h($scope) ?>">
                 <input type="text" name="q" class="search-input" placeholder="書籍名・コメントで検索" value="<?= h($q) ?>">
                 <button type="submit" class="search-btn">
                     <i class="fas fa-search"></i> 検索
                 </button>
                 <?php if($q !== ''): ?>
-                    <a href="select.php" class="search-clear">クリア</a>
+                    <a href="select.php?scope=<?= h($scope) ?>" class="search-clear">クリア</a>
                 <?php endif; ?>
             </form>
 
@@ -167,6 +217,11 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
                             <p>「<?= h($q) ?>」に一致するブックマークはありません</p>
                             <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999;">
                                 キーワードを変えて検索してみてください
+                            </p>
+                        <?php elseif($scope === 'public'): ?>
+                            <p>公開されているブックマークはまだありません</p>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999;">
+                                自分の本を公開すると、ここに並びます
                             </p>
                         <?php else: ?>
                             <p>まだブックマークがありません</p>

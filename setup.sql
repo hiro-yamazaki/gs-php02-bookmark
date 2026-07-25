@@ -12,36 +12,10 @@ CREATE DATABASE IF NOT EXISTS gs_bookmark_db
 
 USE gs_bookmark_db;
 
--- 2. テーブル作成（Table名: gs_bm_table）
---   id           : ユニーク値（int 12 / PRIMARY / AUTO_INCREMENT）
---   book_name    : 書籍名（varchar 64）
---   book_url     : 書籍URL（text）
---   book_comment : 書籍コメント（text）
---   image_url    : 表紙画像URL（text / 任意。「本を探す」で自動設定）
---   created_at   : 登録日時（datetime）
-CREATE TABLE IF NOT EXISTS gs_bm_table (
-  id INT(12) NOT NULL AUTO_INCREMENT,
-  book_name VARCHAR(64) NOT NULL,
-  book_url TEXT NOT NULL,
-  book_comment TEXT NOT NULL,
-  image_url TEXT,
-  created_at DATETIME NOT NULL,
-  PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- （既存テーブルに表紙カラムを後から足す場合はこちら）
--- ALTER TABLE gs_bm_table ADD COLUMN image_url TEXT AFTER book_comment;
-
--- 3. サンプルデータ（3件・表紙つき）
-INSERT INTO gs_bm_table (id, book_name, book_url, book_comment, image_url, created_at) VALUES
-(NULL, 'リーダブルコード', 'https://www.oreilly.co.jp/books/9784873115658/', '読みやすいコードの書き方の定番本。変数名の付け方から学び直したい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115655.09.MZZZZZZZ.jpg', NOW()),
-(NULL, '独習PHP 第4版', 'https://www.shoeisha.co.jp/book/detail/9784798168491', 'PHPの基礎固めに。授業の復習用として手元に置いておきたい一冊。', 'https://images-na.ssl-images-amazon.com/images/P/4798168491.09.MZZZZZZZ.jpg', NOW()),
-(NULL, 'SQLアンチパターン', 'https://www.oreilly.co.jp/books/9784873115894/', 'DBを学び始めたので、やってはいけない設計を先に知っておきたい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115892.09.MZZZZZZZ.jpg', NOW());
-
 -- ============================================
--- 課題4：ログイン用ユーザーテーブル
+-- ユーザーテーブル（gs_bm_table から参照するので先に作る）
 -- ============================================
--- 4. ユーザーテーブル作成（Table名: gs_user_table）
+-- 2. ユーザーテーブル作成（Table名: gs_user_table）
 --   id        : ユニーク値（int / PRIMARY / AUTO_INCREMENT）
 --   lid       : ログインID（varchar 32 / 重複禁止）
 --   lpw       : パスワード（password_hash()のハッシュ値を保存 / varchar 255）
@@ -55,10 +29,46 @@ CREATE TABLE IF NOT EXISTS gs_user_table (
   UNIQUE KEY uq_lid (lid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. サンプルユーザー（パスワードは password_hash() でハッシュ化済み・平文では保存しない）
---    admin / admin1234  … 管理者（登録・編集・削除まで可能）
---    user  / user1234   … 一般（登録・編集のみ／削除は不可）
+-- 3. サンプルユーザー（パスワードは password_hash() でハッシュ化済み・平文では保存しない）
+--    admin / admin1234  … 管理者
+--    user  / user1234   … 一般
 --    ※ハッシュは bcrypt。別のパスワードにしたい場合は自分でハッシュを作り直して差し替える。
 INSERT INTO gs_user_table (lid, lpw, kanri_flg) VALUES
 ('admin', '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 1),
 ('user',  '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 0);
+
+-- ============================================
+-- ブックマークテーブル
+-- ============================================
+-- 4. テーブル作成（Table名: gs_bm_table）
+--   id           : ユニーク値（int 12 / PRIMARY / AUTO_INCREMENT）
+--   user_id      : 持ち主のユーザーID（gs_user_table.id を参照）
+--   book_name    : 書籍名（varchar 64）
+--   book_url     : 書籍URL（text）
+--   book_comment : 書籍コメント（text）
+--   image_url    : 表紙画像URL（text / 任意。「本を探す」で自動設定）
+--   is_public    : 公開フラグ（1=他の利用者にも見せる, 0=自分だけ）※既定は非公開
+--   created_at   : 登録日時（datetime）
+--
+-- ON DELETE CASCADE：ユーザーが退会したら、その人のブックマークも一緒に消える。
+--   （持ち主のいないデータが残らないようにするため）
+CREATE TABLE IF NOT EXISTS gs_bm_table (
+  id INT(12) NOT NULL AUTO_INCREMENT,
+  user_id INT(12) NOT NULL,
+  book_name VARCHAR(64) NOT NULL,
+  book_url TEXT NOT NULL,
+  book_comment TEXT NOT NULL,
+  image_url TEXT,
+  is_public TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_user (user_id),
+  KEY idx_public (is_public),
+  CONSTRAINT fk_bm_user FOREIGN KEY (user_id) REFERENCES gs_user_table (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. サンプルデータ（admin=1 の本棚に3件。1件だけ公開にしてある）
+INSERT INTO gs_bm_table (id, user_id, book_name, book_url, book_comment, image_url, is_public, created_at) VALUES
+(NULL, 1, 'リーダブルコード', 'https://www.oreilly.co.jp/books/9784873115658/', '読みやすいコードの書き方の定番本。変数名の付け方から学び直したい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115655.09.MZZZZZZZ.jpg', 1, NOW()),
+(NULL, 1, '独習PHP 第4版', 'https://www.shoeisha.co.jp/book/detail/9784798168491', 'PHPの基礎固めに。授業の復習用として手元に置いておきたい一冊。', 'https://images-na.ssl-images-amazon.com/images/P/4798168491.09.MZZZZZZZ.jpg', 0, NOW()),
+(NULL, 1, 'SQLアンチパターン', 'https://www.oreilly.co.jp/books/9784873115894/', 'DBを学び始めたので、やってはいけない設計を先に知っておきたい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115892.09.MZZZZZZZ.jpg', 0, NOW());

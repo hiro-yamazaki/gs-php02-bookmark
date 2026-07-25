@@ -13,6 +13,8 @@ $book_name    = trim($_POST['book_name'] ?? '');
 $book_url     = trim($_POST['book_url'] ?? '');
 $book_comment = trim($_POST['book_comment'] ?? '');
 $book_image   = trim($_POST['book_image'] ?? ''); //表紙画像URL（任意・「本を探す」で自動設定）
+//公開設定（チェックが無ければ非公開。安全側の既定にしておく）
+$is_public    = isset($_POST['is_public']) ? 1 : 0;
 
 // 入力チェック（書籍名・URLは必須、コメントは任意。書籍名64文字超もフォームへ戻す）
 if ($book_name === '' || $book_url === '' || mb_strlen($book_name) > 64) {
@@ -35,11 +37,15 @@ if ($book_image !== '' && (!preg_match('#\Ahttps://#i', $book_image) || mb_strle
 $pdo = db_conn();
 
 // 2. SQL作成（バインド変数でSQLインジェクション対策）
-$stmt = $pdo->prepare('INSERT INTO gs_bm_table (book_name, book_url, book_comment, image_url, created_at) VALUES (:book_name, :book_url, :book_comment, :image_url, NOW())');
+//    user_id はフォームからではなくセッションから取る。
+//    （フォーム経由にすると、他人のIDを送り込んで他人の本棚に登録できてしまう）
+$stmt = $pdo->prepare('INSERT INTO gs_bm_table (user_id, book_name, book_url, book_comment, image_url, is_public, created_at) VALUES (:user_id, :book_name, :book_url, :book_comment, :image_url, :is_public, NOW())');
+$stmt->bindValue(':user_id', currentUserId(), PDO::PARAM_INT);
 $stmt->bindValue(':book_name', $book_name, PDO::PARAM_STR);
 $stmt->bindValue(':book_url', $book_url, PDO::PARAM_STR);
 $stmt->bindValue(':book_comment', $book_comment, PDO::PARAM_STR);
 $stmt->bindValue(':image_url', $book_image, PDO::PARAM_STR);
+$stmt->bindValue(':is_public', $is_public, PDO::PARAM_INT);
 
 // 3. 実行（PHP8はSQLエラー時に例外が飛ぶのでcatchする）
 try {

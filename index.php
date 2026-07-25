@@ -84,6 +84,14 @@ loginCheck(); //ログインしていない人は登録フォームを見られ�
                     <textarea id="book_comment" name="book_comment" class="form-textarea" placeholder="読みたい理由やメモがあれば（あとから編集でも書けます）"></textarea>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-check">
+                        <input type="checkbox" name="is_public" value="1">
+                        <span><i class="fas fa-earth-asia"></i> この本を他の利用者にも公開する</span>
+                    </label>
+                    <p class="form-help">既定は非公開です。チェックを入れると「みんなの本棚」に並びます（あとから変更できます）。</p>
+                </div>
+
                 <button type="submit" class="submit-btn">
                     <i class="fas fa-bookmark"></i>
                     ブックマークする

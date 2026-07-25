@@ -5,9 +5,19 @@
 // URLは ISBN から組み立てた Amazon商品ページ を優先して返す。
 // Amazonアソシエイト承認後は funcs.php の AMAZON_ASSOCIATE_TAG を設定するだけで
 // 生成されるURLがアフィリエイトリンクになる。
+session_start();
 require_once('funcs.php');
 
 header('Content-Type: application/json; charset=utf-8');
+
+// このAPIもログイン中の利用者だけに使わせる。
+// ※画面遷移ではなくJavaScriptのfetchで呼ばれるので、loginCheck()のリダイレクトではなく
+//   401とJSONを返す（リダイレクトを返すとフロント側で沈黙して原因が分からなくなる）
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['items' => [], 'error' => 'login required'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 // ISBN-13(978〜) を ISBN-10 に変換（Amazonの書籍ASIN=ISBN-10）
 function isbn13_to_10(string $isbn13): ?string {

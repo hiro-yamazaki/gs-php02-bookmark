@@ -99,7 +99,8 @@ function loginCheck(){
 }
 
 //管理者チェック（loginCheck()の後に呼ぶ。kanri_flg=1以外は一覧へ戻す）
-//  削除など「管理者だけに許可したい処理」の先頭で使う
+//  ブックマークの削除はSQL側で「自分の行 or 管理者」を判定するようになったので現在は未使用。
+//  Phase 3 のユーザー管理画面（管理者専用ページ）で使う。
 function adminCheck(){
     if ((int)($_SESSION['kanri_flg'] ?? 0) !== 1) {
         header('Location: select.php');
@@ -118,4 +119,10 @@ function isLoggedIn(){
 //管理者としてログイン中かどうかを返す（削除ボタンの出し分け用）
 function isAdmin(){
     return isLoggedIn() && (int)($_SESSION['kanri_flg'] ?? 0) === 1;
+}
+
+//ログイン中のユーザーID（gs_user_table.id）を返す
+//  ブックマークの持ち主を判定する基準になる。0が返るのは未ログイン時のみ。
+function currentUserId(){
+    return (int)($_SESSION['user_id'] ?? 0);
 }
