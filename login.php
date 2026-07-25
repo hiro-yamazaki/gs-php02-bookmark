@@ -36,7 +36,7 @@ $withdrawn  = isset($_GET['withdrawn']); //退会が完了した
     <!-- ヘッダー -->
     <header class="header">
         <div class="nav-container">
-            <a href="#" class="logo">
+            <a href="welcome.php" class="logo">
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>

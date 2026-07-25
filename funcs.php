@@ -77,9 +77,11 @@ function logoutSession(){
 //  未ログイン、またはブラウザとサーバーのセッションIDが一致しない場合は
 //  ログイン画面へ戻す（＝ログインしていないと中身は見られない）
 function loginCheck(){
-    //① 未ログイン（シークレットウィンドウ・URL直打ちを含む）→ ログイン画面へ戻す
+    //① 未ログイン（シークレットウィンドウ・URL直打ちを含む）→ トップ画面へ戻す
+    //   初めて来た人にいきなりログインフォームを出さず、
+    //   「はじめる／ログイン」を選べる welcome.php に送る。
     if (!isset($_SESSION['chk_ssid']) || $_SESSION['chk_ssid'] !== session_id()) {
-        header('Location: login.php');
+        header('Location: welcome.php');
         exit; //exitを忘れると以降のHTMLが出力され、中身が見えてしまう
     }
     //② 一定時間操作がなければ自動ログアウト（セッションの有効期限切れ）
