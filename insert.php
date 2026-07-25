@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck(); //ログインしていない人は登録処理をさせない（ログイン必要ページ）
 verifyCheck(); //電話番号の確認が済むまで使わせない
 
@@ -53,7 +53,7 @@ $stmt->bindValue(':is_public', $is_public, PDO::PARAM_INT);
 try {
     $status = $stmt->execute();
 } catch (PDOException $e) {
-    exit('ErrorMessage:' . $e->getMessage());
+    dbError('query failed', $e);
 }
 
 // 4. 実行後の処理（登録できたら入力画面へ戻る）

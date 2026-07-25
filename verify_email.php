@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck(); //ログインは必要。ただし verifyCheck() は呼ばない（呼ぶとこの画面自体に来られない）
 
 //すでに確認済みなら本棚へ

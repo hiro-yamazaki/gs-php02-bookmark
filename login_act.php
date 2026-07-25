@@ -1,6 +1,6 @@
 <?php
-session_start(); // ← ログイン処理なので忘れずに最初に呼ぶ
 require_once('funcs.php');
+appSessionStart(); // ← ログイン処理なので忘れずに最初に呼ぶ
 
 //フォーム以外（GET直アクセス等）から開かれた場合はログイン画面へ戻す
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -17,6 +17,14 @@ $lpw   = (string)($_POST['lpw'] ?? '');
 //1. DB接続（funcs.phpの共通関数）
 $pdo = db_conn();
 
+//1-2. 短時間に失敗しすぎていないか確認する（パスワード総当たり対策）
+//     パスワード照合より前に見る。ここを通さないと何度でも試せてしまう。
+$lock = loginLockRemaining($pdo, $email);
+if ($lock > 0) {
+    header('Location: login.php?locked=' . (int)ceil($lock / 60));
+    exit;
+}
+
 //2. SQL作成
 //   パスワードはハッシュ化して保存しているのでWHEREでは直接比較できない。
 //   まずメールアドレスでユーザーを1件検索し、パスワードは後で password_verify で照合する。
@@ -27,7 +35,7 @@ $stmt->bindValue(':email', $email, PDO::PARAM_STR);
 try {
     $stmt->execute();
 } catch (PDOException $e) {
-    exit('ErrorQuery:' . $e->getMessage());
+    dbError('query failed', $e);
 }
 
 //4. 実行後の処理（該当ユーザー1件を取得）
@@ -44,6 +52,7 @@ if ($val && password_verify($lpw, $val['lpw']) && $val['deleted_at'] !== null) {
         exit;
     }
     //猶予期間内。まだログインさせず、復元するかどうかを確認する
+    loginSucceeded($pdo, $email); //パスワードは合っていたので失敗記録は消す
     session_regenerate_id(true);
     $_SESSION['restore_user_id'] = (int)$val['id'];
     $_SESSION['restore_deadline'] = $limit;
@@ -53,6 +62,7 @@ if ($val && password_verify($lpw, $val['lpw']) && $val['deleted_at'] !== null) {
 
 //6. ユーザーが存在し、かつ入力パスワードがハッシュと一致したらログイン成功
 if ($val && password_verify($lpw, $val['lpw'])) {
+    loginSucceeded($pdo, $email); //失敗の記録を消す（次回また5回試せる）
     //セッションIDを作り替え、その値を「鍵」としてサーバー側に保存する
     //（同じIDがレスポンスでブラウザにも渡り、サーバーとブラウザで共有される）
     session_regenerate_id(true);
@@ -75,9 +85,10 @@ if ($val && password_verify($lpw, $val['lpw'])) {
     header('Location: index.php');
     exit;
 } else {
-    //ログイン失敗 → ログイン画面へ
+    //ログイン失敗 → 回数を数えてログイン画面へ
     //  「メールアドレスが存在しない」と「パスワードが違う」を区別せず同じ扱いにする。
     //  分けて返すと、外部から会員の有無を調べられてしまうため。
+    loginFailed($pdo, $email);
     header('Location: login.php?err=1');
     exit;
 }

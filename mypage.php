@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck(); //ログイン必須ページ
 
 //1. 自分のアカウント情報を取り出す

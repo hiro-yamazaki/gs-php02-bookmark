@@ -1,2 +1,53 @@
 # 文字コードをHTTPヘッダーで明示（文字化け防止）
 AddDefaultCharset UTF-8
+
+# ============================================
+# HTTPSを強制する
+# ============================================
+# メールアドレスとパスワードを平文で流さないため。
+# ※常時SSLが有効なサーバーでのみ有効にすること。
+#   証明書が未設定のままこれを入れると、サイトに繋がらなくなる。
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# ============================================
+# 設定ファイル・SQL・ドキュメントを直接ダウンロードさせない
+# ============================================
+# これが無いと https://ドメイン/setup.sql でテーブル定義が読めてしまう。
+# config.php はDBのパスワードを含むため、特に外に出してはいけない。
+<FilesMatch "\.(sql|md)$">
+    Require all denied
+</FilesMatch>
+
+<Files "config.php">
+    Require all denied
+</Files>
+
+<Files "config.sample.php">
+    Require all denied
+</Files>
+
+# CLIからのみ実行するスクリプト（Web経由では叩かせない）
+<Files "purge.php">
+    Require all denied
+</Files>
+
+<Files "create_admin.php">
+    Require all denied
+</Files>
+
+# ============================================
+# ブラウザ側の保護ヘッダー
+# ============================================
+<IfModule mod_headers.c>
+    # ページを他サイトのiframeに埋め込ませない（クリックジャッキング対策）
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # 中身を勝手に別の型として解釈させない
+    Header always set X-Content-Type-Options "nosniff"
+    # 外部サイトへ遷移するとき、どのページから来たかを渡しすぎない
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

@@ -11,6 +11,40 @@ function h($str){
     return htmlspecialchars($str, ENT_QUOTES,'UTF-8');
 }
 
+//セッションを開始する（すべてのページの先頭でこれを呼ぶ）
+//  session_start() を直接呼ばず必ずこの関数を通すこと。
+//  クッキーの保護設定は session_start() より前でないと効かないため、
+//  各ページで session_start() を書くと設定漏れが起きる。
+//
+//  secure   : HTTPSのときだけクッキーを送る（盗聴対策）
+//  httponly : JavaScriptから読めなくする（XSSでセッションを盗まれない）
+//  samesite : 他サイトからの遷移では送らない（CSRF対策の補強）
+function appSessionStart(){
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+    session_set_cookie_params([
+        'lifetime' => 0,        //ブラウザを閉じたら消える
+        'path'     => '/',
+        'secure'   => $isHttps, //ローカル(http)でも動くよう、実際の接続方式に合わせる
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
+
+//DBエラーが起きたときの共通処理
+//  例外の内容（テーブル名・接続先など）は画面に出さずログに送る。
+//  画面に出すと、攻撃者にサーバー内部の構造を教えることになる。
+function dbError($where, PDOException $e){
+    error_log($where . ': ' . $e->getMessage());
+    http_response_code(500);
+    exit('処理中にエラーが発生しました。時間をおいてお試しください。');
+}
+
 //DB接続（接続情報をここ1箇所に集約）
 //本番サーバー（さくら等）では config.php（git管理外）の接続情報を使う
 //ローカルのMac（開発機）では config.php があっても常にMAMPへ接続する
@@ -32,7 +66,9 @@ function db_conn(){
         //接続できない時に長時間待たないよう5秒でタイムアウト
         return new PDO($c['dsn'], $c['user'], $c['pass'], [PDO::ATTR_TIMEOUT => 5]);
     } catch (PDOException $e) {
-        exit('DBConnectError:' . $e->getMessage());
+        error_log('DB connect failed: ' . $e->getMessage());
+        http_response_code(500);
+        exit('ただいま接続できません。時間をおいてお試しください。');
     }
 }
 
@@ -260,6 +296,61 @@ function checkVerifyCode(PDO $pdo, $userId, $input){
     $clean->execute();
 
     return ['ok' => true, 'error' => ''];
+}
+
+// ======================================================
+// ログイン試行回数の制限（パスワード総当たり対策）
+//
+// 何度でも試せると、よくあるパスワードを順に入れるだけで破られる。
+// 一定回数外したら、しばらく受け付けないようにする。
+// ======================================================
+
+const LOGIN_MAX_FAILS   = 5;   //この回数続けて失敗したらロックする
+const LOGIN_LOCK_SECONDS = 900; //ロックする時間（秒）＝15分
+
+//試行を数えるためのキーを作る
+//  メールアドレスとIPアドレスを混ぜてハッシュ化する。
+//  ・メールをそのまま保存しない → 記録から会員名簿が作れない
+//  ・IPを混ぜる → 他人が特定の利用者を狙ってロックすることができない
+function loginAttemptKey($email){
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    return hash('sha256', mb_strtolower(trim($email)) . '|' . $ip);
+}
+
+//いまロック中かどうか。ロック中なら解除までの残り秒数を返す（0ならロックなし）
+function loginLockRemaining(PDO $pdo, $email){
+    $stmt = $pdo->prepare('SELECT fail_count, last_fail_at FROM gs_login_attempt WHERE attempt_key = :k');
+    $stmt->bindValue(':k', loginAttemptKey($email), PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row || (int)$row['fail_count'] < LOGIN_MAX_FAILS) {
+        return 0;
+    }
+    $unlockAt = strtotime($row['last_fail_at']) + LOGIN_LOCK_SECONDS;
+    return max(0, $unlockAt - time());
+}
+
+//失敗を1回数える
+function loginFailed(PDO $pdo, $email){
+    $stmt = $pdo->prepare(
+        'INSERT INTO gs_login_attempt (attempt_key, fail_count, last_fail_at)
+         VALUES (:k, 1, NOW())
+         ON DUPLICATE KEY UPDATE
+             -- 前回の失敗からロック時間以上あいていれば数え直す
+             fail_count = IF(last_fail_at < NOW() - INTERVAL :sec SECOND, 1, fail_count + 1),
+             last_fail_at = NOW()'
+    );
+    $stmt->bindValue(':k', loginAttemptKey($email), PDO::PARAM_STR);
+    $stmt->bindValue(':sec', LOGIN_LOCK_SECONDS, PDO::PARAM_INT);
+    $stmt->execute();
+}
+
+//成功したら記録を消す
+function loginSucceeded(PDO $pdo, $email){
+    $stmt = $pdo->prepare('DELETE FROM gs_login_attempt WHERE attempt_key = :k');
+    $stmt->bindValue(':k', loginAttemptKey($email), PDO::PARAM_STR);
+    $stmt->execute();
 }
 
 // ======================================================

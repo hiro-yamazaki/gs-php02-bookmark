@@ -1,8 +1,8 @@
 <?php
 // 未ログインの人が最初に見る画面（トップ／ランディング）。
 // ここから「はじめる（新規登録）」と「ログイン」に分岐する。
-session_start();
 require_once('funcs.php');
+appSessionStart();
 nocache();
 
 //ログイン済みならこの画面は出さず、そのまま本棚へ

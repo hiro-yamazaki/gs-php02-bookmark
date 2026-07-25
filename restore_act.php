@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: restore.php');

@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck(); //ログインしていない人には見せない（ログイン必要ページ）
 verifyCheck(); //電話番号の確認が済むまで使わせない
 

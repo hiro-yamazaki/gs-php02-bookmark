@@ -5,8 +5,8 @@
 // URLは ISBN から組み立てた Amazon商品ページ を優先して返す。
 // Amazonアソシエイト承認後は funcs.php の AMAZON_ASSOCIATE_TAG を設定するだけで
 // 生成されるURLがアフィリエイトリンクになる。
-session_start();
 require_once('funcs.php');
+appSessionStart();
 
 header('Content-Type: application/json; charset=utf-8');
 

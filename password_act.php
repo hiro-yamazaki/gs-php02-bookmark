@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

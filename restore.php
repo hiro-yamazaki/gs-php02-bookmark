@@ -1,8 +1,8 @@
 <?php
 // 退会したアカウントで正しいパスワードを入力した人に、復元するかどうかを尋ねる画面。
 // ここではまだログインさせない（復元に同意して初めてログイン状態にする）。
-session_start();
 require_once('funcs.php');
+appSessionStart();
 nocache();
 
 //login_act.php を通っていない人は来られない

@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 
 //フォーム以外（GET直アクセス等）から開かれた場合は登録画面へ戻す
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

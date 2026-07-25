@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 loginCheck(); //ログインしていない人は削除できない（ログイン必要ページ）
 verifyCheck(); //電話番号の確認が済むまで使わせない
 //削除できるのは「自分のブックマーク」だけ。ただし管理者(kanri_flg=1)は全件削除できる。
@@ -39,7 +39,7 @@ if (isAdmin()) {
 try {
     $status = $stmt->execute();
 } catch (PDOException $e) {
-    exit('ErrorMessage:' . $e->getMessage());
+    dbError('query failed', $e);
 }
 
 //4. 実行後の処理（削除できたら一覧へ戻る）

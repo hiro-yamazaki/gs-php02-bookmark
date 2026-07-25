@@ -1,6 +1,6 @@
 <?php
-session_start();
 require_once('funcs.php');
+appSessionStart();
 nocache();
 
 //すでにログイン済みなら本棚へ（登録画面を見せる必要がない）

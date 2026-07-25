@@ -58,14 +58,16 @@ CREATE TABLE IF NOT EXISTS gs_withdrawal_log (
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. サンプルユーザー（パスワードは password_hash() でハッシュ化済み・平文では保存しない）
---    admin@example.com / admin1234 … 管理者
---    user@example.com  / user1234  … 一般
---    ※ハッシュは bcrypt。別のパスワードにしたい場合は自分でハッシュを作り直して差し替える。
---    ※一般公開する前にこの2件は必ず削除すること。
-INSERT INTO gs_user_table (email, phone, lpw, nickname, email_verified, kanri_flg, created_at) VALUES
-('admin@example.com', NULL, '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 'admin', 1, 1, NOW()),
-('user@example.com',  NULL, '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 'user',  1, 0, NOW());
+-- 3. 最初の管理者アカウントの作り方
+--
+--    ここにサンプルユーザーのINSERTは書かない。
+--    パスワードが公開リポジトリに載ってしまい、誰でもその鍵でログインできるため。
+--    （実際に「admin/admin1234」を書いていて、公開直前まで残っていた）
+--
+--    代わりに、サーバー上でコマンドを1回実行して作る:
+--        php create_admin.php
+--
+--    ローカルで試すだけの場合も同じコマンドでよい。
 
 -- ============================================
 -- ブックマークテーブル
@@ -115,8 +117,22 @@ CREATE TABLE IF NOT EXISTS gs_verify_code (
   CONSTRAINT fk_verify_user FOREIGN KEY (user_id) REFERENCES gs_user_table (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. サンプルデータ（admin=1 の本棚に3件。1件だけ公開にしてある）
-INSERT INTO gs_bm_table (id, user_id, book_name, book_url, book_comment, image_url, is_public, created_at) VALUES
-(NULL, 1, 'リーダブルコード', 'https://www.oreilly.co.jp/books/9784873115658/', '読みやすいコードの書き方の定番本。変数名の付け方から学び直したい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115655.09.MZZZZZZZ.jpg', 1, NOW()),
-(NULL, 1, '独習PHP 第4版', 'https://www.shoeisha.co.jp/book/detail/9784798168491', 'PHPの基礎固めに。授業の復習用として手元に置いておきたい一冊。', 'https://images-na.ssl-images-amazon.com/images/P/4798168491.09.MZZZZZZZ.jpg', 0, NOW()),
-(NULL, 1, 'SQLアンチパターン', 'https://www.oreilly.co.jp/books/9784873115894/', 'DBを学び始めたので、やってはいけない設計を先に知っておきたい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115892.09.MZZZZZZZ.jpg', 0, NOW());
+-- 5. サンプルの本は入れない
+--    持ち主(user_id)が決まっていないと入れられないため。
+--    アカウントを作ったあと、画面から登録してください。
+
+-- ============================================
+-- ログイン試行の記録（パスワード総当たり対策）
+-- ============================================
+--   attempt_key  : メールアドレスとIPアドレスを組み合わせたハッシュ値
+--                  ※メールアドレスそのものは保存しない（記録から会員が分かってしまうため）
+--                  ※IPも混ぜるので、他人が特定の人を狙ってロックすることはできない
+--   fail_count   : 連続で失敗した回数
+--   last_fail_at : 直近の失敗時刻
+CREATE TABLE IF NOT EXISTS gs_login_attempt (
+  attempt_key CHAR(64) NOT NULL,
+  fail_count INT(4) NOT NULL DEFAULT 0,
+  last_fail_at DATETIME NOT NULL,
+  PRIMARY KEY (attempt_key),
+  KEY idx_last_fail (last_fail_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
