@@ -2,6 +2,7 @@
 session_start();
 require_once('funcs.php');
 loginCheck(); //ログインしていない人には見せない（ログイン必要ページ）
+verifyCheck(); //電話番号の確認が済むまで使わせない
 
 //このページ1枚で「本を探す → ストックする → 積んだ本を見る」まで完結させる。
 //（以前は登録＝index.php／一覧＝select.php と分かれていた）
@@ -19,8 +20,9 @@ $q = trim($_GET['q'] ?? '');
 //   ※想定外の値が来たら mine に倒す（勝手に他人のデータを出さない）
 $scope = ($_GET['scope'] ?? 'mine') === 'public' ? 'public' : 'mine';
 
-//アカウント作成直後だけ歓迎メッセージを出す
-$welcome = isset($_GET['welcome']);
+//アカウント作成直後・電話番号の確認直後だけメッセージを出す
+$welcome  = isset($_GET['welcome']);
+$verified = isset($_GET['verified']);
 
 //3. データ取得SQL作成（新しい順）
 //   検索時は 書籍名 or コメント の部分一致（授業で習ったLIKE検索）
@@ -163,7 +165,9 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
     <!-- メインコンテンツ -->
     <main class="main-container">
-        <?php if ($welcome): ?>
+        <?php if ($verified): ?>
+            <p class="login-notice"><i class="fas fa-circle-check"></i> 電話番号を確認しました。さっそく1冊目を積んでみましょう。</p>
+        <?php elseif ($welcome): ?>
             <p class="login-notice"><i class="fas fa-circle-check"></i> アカウントを作成しました。さっそく1冊目を積んでみましょう。</p>
         <?php endif; ?>
 

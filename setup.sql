@@ -80,6 +80,24 @@ CREATE TABLE IF NOT EXISTS gs_bm_table (
   CONSTRAINT fk_bm_user FOREIGN KEY (user_id) REFERENCES gs_user_table (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================
+-- 電話番号のSMS認証で使う確認コードの保管テーブル
+-- ============================================
+--   code_hash  : 確認コードのハッシュ。コードそのものは保存しない
+--   expires_at : 有効期限
+--   attempts   : 入力を間違えた回数（総当たり対策）
+--   send_count : 1時間あたりの送信回数（SMSは1通ごとに課金されるため上限を設ける）
+CREATE TABLE IF NOT EXISTS gs_verify_code (
+  user_id INT(12) NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  attempts INT(3) NOT NULL DEFAULT 0,
+  send_count INT(3) NOT NULL DEFAULT 1,
+  sent_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id),
+  CONSTRAINT fk_verify_user FOREIGN KEY (user_id) REFERENCES gs_user_table (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 5. サンプルデータ（admin=1 の本棚に3件。1件だけ公開にしてある）
 INSERT INTO gs_bm_table (id, user_id, book_name, book_url, book_comment, image_url, is_public, created_at) VALUES
 (NULL, 1, 'リーダブルコード', 'https://www.oreilly.co.jp/books/9784873115658/', '読みやすいコードの書き方の定番本。変数名の付け方から学び直したい。', 'https://images-na.ssl-images-amazon.com/images/P/4873115655.09.MZZZZZZZ.jpg', 1, NOW()),

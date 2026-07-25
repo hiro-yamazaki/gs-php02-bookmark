@@ -77,11 +77,19 @@ try {
 
 //5. そのままログイン状態にする（登録直後にまたログインさせない）
 session_regenerate_id(true);
-$_SESSION['chk_ssid']      = session_id();
-$_SESSION['user_id']       = (int)$pdo->lastInsertId();
-$_SESSION['nickname']      = $nickname;
-$_SESSION['kanri_flg']     = 0;
-$_SESSION['last_activity'] = time();
+$_SESSION['chk_ssid']       = session_id();
+$_SESSION['user_id']        = (int)$pdo->lastInsertId();
+$_SESSION['nickname']       = $nickname;
+$_SESSION['kanri_flg']      = 0;
+$_SESSION['phone_verified'] = 0; //SMSで番号を確認するまでは本棚を使えない
+$_SESSION['last_activity']  = time();
 
-header('Location: index.php?welcome=1');
+//6. 確認コードを発行してSMSを送る
+//   送信に失敗しても登録自体は済んでいるので、確認画面へ進めて再送できるようにする
+$result = issueVerifyCode($pdo, currentUserId(), $phone);
+if (!$result['ok']) {
+    setFlash('verify_error', $result['error']);
+}
+
+header('Location: verify_phone.php');
 exit;

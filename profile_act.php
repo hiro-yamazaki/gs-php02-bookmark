@@ -64,8 +64,17 @@ try {
 //画面表示に使っている表示名はセッションにも持っているので更新する
 $_SESSION['nickname'] = $nickname;
 
-setFlash('mypage_notice', $phoneChanged
-    ? '登録内容を変更しました。電話番号が変わったため、確認済みの状態はリセットされました。'
-    : '登録内容を変更しました。');
+//番号を変えたらセッション側も未確認に戻す。
+//  これを忘れると、DBは未確認なのに画面だけ使えてしまう。
+if ($phoneChanged) {
+    $_SESSION['phone_verified'] = 0;
+    //新しい番号宛に確認コードを送り、そのまま確認画面へ進んでもらう
+    issueVerifyCode($pdo, currentUserId(), $phone);
+    setFlash('verify_notice', '新しい電話番号に確認コードを送信しました。');
+    header('Location: verify_phone.php');
+    exit;
+}
+
+setFlash('mypage_notice', '登録内容を変更しました。');
 header('Location: mypage.php');
 exit;

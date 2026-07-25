@@ -2,6 +2,7 @@
 session_start();
 require_once('funcs.php');
 loginCheck(); //ログインしていない人は更新処理をさせない（ログイン必要ページ）
+verifyCheck(); //電話番号の確認が済むまで使わせない
 
 //POSTデータ取得（フォーム以外から開かれた場合は本棚へ戻す）
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

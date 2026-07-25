@@ -2,6 +2,7 @@
 session_start();
 require_once('funcs.php');
 loginCheck(); //ログインしていない人は編集画面を見られない（ログイン必要ページ）
+verifyCheck(); //電話番号の確認が済むまで使わせない
 
 //一覧から ?id=◯ で編集対象を受け取る（数字以外・未指定は一覧へ戻す）
 $id = $_GET['id'] ?? '';

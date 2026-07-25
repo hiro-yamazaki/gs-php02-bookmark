@@ -115,6 +115,34 @@ body {
     font-size: 0.9rem;
 }
 
+/* 確認コードの入力欄（6桁を大きく・等間隔で） */
+.verify-code-input {
+    font-size: 1.6rem;
+    letter-spacing: 0.6em;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* 「再送信する」のように、ボタンだがリンクに見せたいもの */
+.resend-form {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: #6c5ce7;
+    cursor: pointer;
+    font-size: 0.88rem;
+    padding: 0.4rem;
+    text-decoration: underline;
+}
+
+.link-btn:hover {
+    color: #5545c9;
+}
+
 /* エラーを複数まとめて出すときの箇条書き */
 .error-list {
     margin: 0;

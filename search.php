@@ -13,7 +13,7 @@ header('Content-Type: application/json; charset=utf-8');
 // このAPIもログイン中の利用者だけに使わせる。
 // ※画面遷移ではなくJavaScriptのfetchで呼ばれるので、loginCheck()のリダイレクトではなく
 //   401とJSONを返す（リダイレクトを返すとフロント側で沈黙して原因が分からなくなる）
-if (!isLoggedIn()) {
+if (!isLoggedIn() || !isPhoneVerified()) {
     http_response_code(401);
     echo json_encode(['items' => [], 'error' => 'login required'], JSON_UNESCAPED_UNICODE);
     exit;

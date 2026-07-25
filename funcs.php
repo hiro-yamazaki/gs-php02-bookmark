@@ -127,6 +127,118 @@ function currentUserId(){
     return (int)($_SESSION['user_id'] ?? 0);
 }
 
+//電話番号の確認が済んでいるか（セッションに持っている値で判定する）
+function isPhoneVerified(){
+    return (int)($_SESSION['phone_verified'] ?? 0) === 1;
+}
+
+//電話番号の確認が済んでいないと使えないページの先頭で呼ぶ
+//  loginCheck() の後に置くこと。
+//  ※確認コードの入力画面（verify_phone.php）自体では呼ばないこと。呼ぶと無限に往復する。
+function verifyCheck(){
+    if (!isPhoneVerified()) {
+        header('Location: verify_phone.php');
+        exit;
+    }
+}
+
+// ======================================================
+// 電話番号のSMS認証（確認コードの発行と照合）
+// ======================================================
+
+const VERIFY_CODE_TTL      = 600; //確認コードの有効期間（秒）＝10分
+const VERIFY_MAX_ATTEMPTS  = 5;   //1つのコードに対する入力ミスの上限
+const VERIFY_MAX_SENDS     = 5;   //1時間あたりの送信回数の上限（SMSは1通ごとに課金される）
+
+//6桁の確認コードを作る
+//  rand()ではなく random_int() を使う。予測されると本人確認の意味がなくなるため。
+function makeVerifyCode(){
+    return str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+}
+
+//確認コードを発行してSMSで送る
+//  戻り値: ['ok' => bool, 'error' => string]
+function issueVerifyCode(PDO $pdo, $userId, $phone){
+    //1. 直近1時間の送信回数を数える（送りすぎを止める）
+    $stmt = $pdo->prepare('SELECT send_count, sent_at FROM gs_verify_code WHERE user_id = :id');
+    $stmt->bindValue(':id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $sendCount = 1;
+    if ($row) {
+        //1時間以内の記録なら回数を積み増す。1時間を過ぎていれば数え直す。
+        $withinHour = (strtotime($row['sent_at']) > time() - 3600);
+        if ($withinHour) {
+            if ((int)$row['send_count'] >= VERIFY_MAX_SENDS) {
+                return ['ok' => false, 'error' => '送信回数の上限に達しました。1時間ほど時間をおいてからお試しください。'];
+            }
+            $sendCount = (int)$row['send_count'] + 1;
+        }
+    }
+
+    //2. コードを作り、ハッシュにして保存する（コードそのものは残さない）
+    $code = makeVerifyCode();
+    $save = $pdo->prepare(
+        'INSERT INTO gs_verify_code (user_id, code_hash, expires_at, attempts, send_count, sent_at)
+         VALUES (:id, :hash, :expires, 0, :cnt, NOW())
+         ON DUPLICATE KEY UPDATE code_hash = VALUES(code_hash), expires_at = VALUES(expires_at),
+                                 attempts = 0, send_count = VALUES(send_count), sent_at = NOW()'
+    );
+    $save->bindValue(':id', $userId, PDO::PARAM_INT);
+    $save->bindValue(':hash', password_hash($code, PASSWORD_DEFAULT), PDO::PARAM_STR);
+    $save->bindValue(':expires', date('Y-m-d H:i:s', time() + VERIFY_CODE_TTL), PDO::PARAM_STR);
+    $save->bindValue(':cnt', $sendCount, PDO::PARAM_INT);
+    $save->execute();
+
+    //3. 送信する。送れなかった場合は正直にそう返す
+    require_once __DIR__ . '/sms.php';
+    $body = '【積読ストック】確認コード: ' . $code . "\n10分以内に入力してください。";
+    if (!sendSms($phone, $body)) {
+        return ['ok' => false, 'error' => 'SMSの送信に失敗しました。番号をご確認のうえ、もう一度お試しください。'];
+    }
+    return ['ok' => true, 'error' => ''];
+}
+
+//入力された確認コードを照合する
+//  戻り値: ['ok' => bool, 'error' => string]
+function checkVerifyCode(PDO $pdo, $userId, $input){
+    $stmt = $pdo->prepare('SELECT code_hash, expires_at, attempts FROM gs_verify_code WHERE user_id = :id');
+    $stmt->bindValue(':id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return ['ok' => false, 'error' => '確認コードが発行されていません。再送信してください。'];
+    }
+    if (strtotime($row['expires_at']) < time()) {
+        return ['ok' => false, 'error' => '確認コードの有効期限が切れています。再送信してください。'];
+    }
+    if ((int)$row['attempts'] >= VERIFY_MAX_ATTEMPTS) {
+        return ['ok' => false, 'error' => '入力できる回数を超えました。再送信して新しいコードを取得してください。'];
+    }
+
+    if (!password_verify($input, $row['code_hash'])) {
+        //間違えた回数を増やす（総当たりで6桁を当てられないようにする）
+        $miss = $pdo->prepare('UPDATE gs_verify_code SET attempts = attempts + 1 WHERE user_id = :id');
+        $miss->bindValue(':id', $userId, PDO::PARAM_INT);
+        $miss->execute();
+        $left = VERIFY_MAX_ATTEMPTS - ((int)$row['attempts'] + 1);
+        return ['ok' => false, 'error' => '確認コードが違います。（あと' . max(0, $left) . '回入力できます）'];
+    }
+
+    //4. 一致した。確認済みにして、使い終わったコードは消す
+    $done = $pdo->prepare('UPDATE gs_user_table SET phone_verified = 1 WHERE id = :id');
+    $done->bindValue(':id', $userId, PDO::PARAM_INT);
+    $done->execute();
+
+    $clean = $pdo->prepare('DELETE FROM gs_verify_code WHERE user_id = :id');
+    $clean->bindValue(':id', $userId, PDO::PARAM_INT);
+    $clean->execute();
+
+    return ['ok' => true, 'error' => ''];
+}
+
 // ======================================================
 // CSRF対策（Phase 2で追加）
 // 「本人が意図してこのフォームから送った」ことを確認する仕組み。
