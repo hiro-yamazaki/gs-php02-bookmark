@@ -4,32 +4,32 @@ require_once('funcs.php');
 loginCheck();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: verify_phone.php');
+    header('Location: verify_email.php');
     exit;
 }
 csrfCheck();
 
-if (isPhoneVerified()) {
+if (isEmailVerified()) {
     header('Location: index.php');
     exit;
 }
 
 $pdo = db_conn();
 
-//送り先の番号を取り出す
-$stmt = $pdo->prepare('SELECT phone FROM gs_user_table WHERE id = :id');
+//送り先のメールアドレスを取り出す
+$stmt = $pdo->prepare('SELECT email FROM gs_user_table WHERE id = :id');
 $stmt->bindValue(':id', currentUserId(), PDO::PARAM_INT);
 $stmt->execute();
-$phone = (string)$stmt->fetchColumn();
+$email = (string)$stmt->fetchColumn();
 
-if ($phone === '') {
-    setFlash('verify_error', '電話番号が登録されていません。アカウント設定から登録してください。');
-    header('Location: verify_phone.php');
+if ($email === '') {
+    setFlash('verify_error', 'メールアドレスが登録されていません。アカウント設定から登録してください。');
+    header('Location: verify_email.php');
     exit;
 }
 
 //発行して送る（送信回数の上限判定は issueVerifyCode() の中で行う）
-$result = issueVerifyCode($pdo, currentUserId(), $phone);
+$result = issueVerifyCode($pdo, currentUserId(), $email);
 
 if ($result['ok']) {
     setFlash('verify_notice', '確認コードを再送信しました。');
@@ -37,5 +37,5 @@ if ($result['ok']) {
     setFlash('verify_error', $result['error']);
 }
 
-header('Location: verify_phone.php');
+header('Location: verify_email.php');
 exit;

@@ -22,7 +22,9 @@ $errors = [];
 if (!isValidEmail($email)) {
     $errors[] = 'メールアドレスの形式が正しくありません。';
 }
-if (!isValidPhone($phone)) {
+//電話番号は任意項目。入力があったときだけ形式を確認する
+//（本人確認はメールで行うため、登録の必須条件にはしない）
+if ($phone !== '' && !isValidPhone($phone)) {
     $errors[] = '電話番号は0から始まる10〜11桁で入力してください。';
 }
 if ($nickname === '' || mb_strlen($nickname) > 32) {
@@ -48,12 +50,13 @@ if ($errors) {
 $pdo = db_conn();
 
 //4. 登録
-//   メール・電話の重複はDBのUNIQUE制約で弾く。
+//   メールアドレスの重複はDBのUNIQUE制約で弾く。
 //   「先にSELECTで確認してからINSERT」は、ほぼ同時に2人が登録すると
 //   すり抜けることがあるため、制約違反を捕まえる形にしている。
-$stmt = $pdo->prepare('INSERT INTO gs_user_table (email, phone, lpw, nickname, phone_verified, kanri_flg, created_at) VALUES (:email, :phone, :lpw, :nickname, 0, 0, NOW())');
+$stmt = $pdo->prepare('INSERT INTO gs_user_table (email, phone, lpw, nickname, email_verified, kanri_flg, created_at) VALUES (:email, :phone, :lpw, :nickname, 0, 0, NOW())');
 $stmt->bindValue(':email', $email, PDO::PARAM_STR);
-$stmt->bindValue(':phone', $phone, PDO::PARAM_STR);
+//未入力ならNULLで保存する（空文字だと2人目以降がUNIQUE制約に引っかかるため）
+$stmt->bindValue(':phone', $phone === '' ? null : $phone, $phone === '' ? PDO::PARAM_NULL : PDO::PARAM_STR);
 //パスワードは必ずハッシュ化して保存する（平文では絶対に持たない）
 $stmt->bindValue(':lpw', password_hash($lpw, PASSWORD_DEFAULT), PDO::PARAM_STR);
 $stmt->bindValue(':nickname', $nickname, PDO::PARAM_STR);
@@ -63,8 +66,8 @@ try {
 } catch (PDOException $e) {
     //23000 = 一意制約違反（すでに使われているメールアドレス／電話番号）
     if ($e->getCode() === '23000') {
-        //どちらが重複したかは伝えない。
-        //「このメールアドレスは登録済み」と返すと、外部から会員の有無を調べられてしまうため。
+        //「このメールアドレスは登録済みです」とは書かない。
+        //そう返すと、外部から会員の有無を1件ずつ調べられてしまうため。
         setFlash('signup_errors', ['このメールアドレスまたは電話番号は登録できません。別の内容をお試しください。']);
         setFlash('signup_old', ['email' => $email, 'phone' => $phoneRaw, 'nickname' => $nickname]);
         header('Location: signup.php');
@@ -81,15 +84,15 @@ $_SESSION['chk_ssid']       = session_id();
 $_SESSION['user_id']        = (int)$pdo->lastInsertId();
 $_SESSION['nickname']       = $nickname;
 $_SESSION['kanri_flg']      = 0;
-$_SESSION['phone_verified'] = 0; //SMSで番号を確認するまでは本棚を使えない
+$_SESSION['email_verified'] = 0; //メールアドレスを確認するまでは本棚を使えない
 $_SESSION['last_activity']  = time();
 
-//6. 確認コードを発行してSMSを送る
+//6. 確認コードを発行してメールを送る
 //   送信に失敗しても登録自体は済んでいるので、確認画面へ進めて再送できるようにする
-$result = issueVerifyCode($pdo, currentUserId(), $phone);
+$result = issueVerifyCode($pdo, currentUserId(), $email);
 if (!$result['ok']) {
     setFlash('verify_error', $result['error']);
 }
 
-header('Location: verify_phone.php');
+header('Location: verify_email.php');
 exit;

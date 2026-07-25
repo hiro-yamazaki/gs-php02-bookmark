@@ -67,17 +67,17 @@ $old    = takeFlash('signup_old', []);
                     <input type="email" id="email" name="email" class="form-input"
                            placeholder="例：you@example.com" maxlength="255" required
                            value="<?= h($old['email'] ?? '') ?>">
-                    <p class="form-help">ログインに使います。</p>
+                    <p class="form-help">ログインに使います。確認コードをこのアドレスに送ります。</p>
                 </div>
 
                 <div class="form-group">
                     <label for="phone" class="form-label">
-                        <i class="fas fa-mobile-screen"></i> 電話番号
+                        <i class="fas fa-mobile-screen"></i> 電話番号 <span class="form-optional">任意</span>
                     </label>
                     <input type="tel" id="phone" name="phone" class="form-input"
-                           placeholder="例：090-1234-5678" maxlength="20" required
+                           placeholder="例：090-1234-5678" maxlength="20"
                            value="<?= h($old['phone'] ?? '') ?>">
-                    <p class="form-help">ハイフンはあってもなくても構いません。本人確認に使います。</p>
+                    <p class="form-help">入力しなくても登録できます。ハイフンはあってもなくても構いません。</p>
                 </div>
 
                 <div class="form-group">

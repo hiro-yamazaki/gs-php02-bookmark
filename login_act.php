@@ -45,13 +45,13 @@ if ($val && password_verify($lpw, $val['lpw'])) {
     //ブックマークの持ち主判定に使うユーザーID（gs_user_table.id）
     $_SESSION['user_id']   = (int)$val['id'];
     //電話番号の確認が済んでいるか（0なら本棚を使わせず確認画面へ送る）
-    $_SESSION['phone_verified'] = (int)$val['phone_verified'];
+    $_SESSION['email_verified'] = (int)$val['email_verified'];
     //有効期限の起点。以降は loginCheck() が操作のたびに更新する
     $_SESSION['last_activity'] = time();
 
     //未確認のまま放置されたアカウントは、ログインのたびに確認画面へ戻す
-    if (!isPhoneVerified()) {
-        header('Location: verify_phone.php');
+    if (!isEmailVerified()) {
+        header('Location: verify_email.php');
         exit;
     }
     header('Location: index.php');

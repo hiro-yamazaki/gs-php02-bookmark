@@ -20,20 +20,21 @@ USE gs_bookmark_db;
 -- 2. ユーザーテーブル作成（Table名: gs_user_table）
 --   id             : ユニーク値（int / PRIMARY / AUTO_INCREMENT）
 --   email          : ログインに使うメールアドレス（重複禁止）
---   phone          : 電話番号。ハイフンなしの数字だけで保存する（重複禁止）
+--   phone          : 電話番号。任意項目。ハイフンなしの数字だけで保存する
+--                    ※未入力はNULL。空文字にすると2人目以降がUNIQUE制約に引っかかる
 --   lpw            : パスワード（password_hash()のハッシュ値を保存 / varchar 255）
 --   nickname       : 画面に表示する名前（本名でなくてよい）
---   phone_verified : 電話番号のSMS認証が済んでいるか（1=済 / 0=未）
---                    ※SMS送信の実装は後のフェーズ。今は登録時に0のまま入る
+--   email_verified : メールアドレスの確認が済んでいるか（1=済 / 0=未）
+--                    0の間は本棚を使えず、確認コードの入力画面に留まる
 --   kanri_flg      : 管理者フラグ（1=管理者, 0=一般）
 --   created_at     : 登録日時
 CREATE TABLE IF NOT EXISTS gs_user_table (
   id INT(12) NOT NULL AUTO_INCREMENT,
   email VARCHAR(255) NOT NULL,
-  phone VARCHAR(20) NOT NULL,
+  phone VARCHAR(20) NULL,
   lpw VARCHAR(255) NOT NULL,
   nickname VARCHAR(32) NOT NULL,
-  phone_verified TINYINT(1) NOT NULL DEFAULT 0,
+  email_verified TINYINT(1) NOT NULL DEFAULT 0,
   kanri_flg INT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   PRIMARY KEY (id),
@@ -46,9 +47,9 @@ CREATE TABLE IF NOT EXISTS gs_user_table (
 --    user@example.com  / user1234  … 一般
 --    ※ハッシュは bcrypt。別のパスワードにしたい場合は自分でハッシュを作り直して差し替える。
 --    ※一般公開する前にこの2件は必ず削除すること。
-INSERT INTO gs_user_table (email, phone, lpw, nickname, phone_verified, kanri_flg, created_at) VALUES
-('admin@example.com', '09000000001', '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 'admin', 1, 1, NOW()),
-('user@example.com',  '09000000002', '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 'user',  1, 0, NOW());
+INSERT INTO gs_user_table (email, phone, lpw, nickname, email_verified, kanri_flg, created_at) VALUES
+('admin@example.com', NULL, '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 'admin', 1, 1, NOW()),
+('user@example.com',  NULL, '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 'user',  1, 0, NOW());
 
 -- ============================================
 -- ブックマークテーブル

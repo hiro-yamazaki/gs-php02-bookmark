@@ -91,16 +91,16 @@ $notice = takeFlash('mypage_notice', '');
             <!-- 現在の登録内容 -->
             <dl class="account-info">
                 <dt>メールアドレス</dt>
-                <dd><?= h($me['email']) ?></dd>
-                <dt>電話番号</dt>
                 <dd>
-                    <?= h($me['phone']) ?>
-                    <?php if ((int)$me['phone_verified'] === 1): ?>
+                    <?= h($me['email']) ?>
+                    <?php if ((int)$me['email_verified'] === 1): ?>
                         <span class="data-badge data-badge--public"><i class="fas fa-circle-check"></i> 確認済み</span>
                     <?php else: ?>
                         <span class="data-badge"><i class="fas fa-clock"></i> 未確認</span>
                     <?php endif; ?>
                 </dd>
+                <dt>電話番号</dt>
+                <dd><?= $me['phone'] === null || $me['phone'] === '' ? '（未登録）' : h($me['phone']) ?></dd>
                 <dt>表示名</dt>
                 <dd><?= h($me['nickname']) ?></dd>
                 <dt>登録日</dt>
@@ -116,12 +116,12 @@ $notice = takeFlash('mypage_notice', '');
                         <label for="email" class="form-label">メールアドレス</label>
                         <input type="email" id="email" name="email" class="form-input" maxlength="255" required
                                value="<?= h($me['email']) ?>">
+                        <p class="form-help">変更すると新しいアドレスに確認コードを送ります。確認するまで本棚は使えません。</p>
                     </div>
                     <div class="form-group">
-                        <label for="phone" class="form-label">電話番号</label>
-                        <input type="tel" id="phone" name="phone" class="form-input" maxlength="20" required
-                               value="<?= h($me['phone']) ?>">
-                        <p class="form-help">番号を変更すると、確認済みの状態はリセットされます。</p>
+                        <label for="phone" class="form-label">電話番号 <span class="form-optional">任意</span></label>
+                        <input type="tel" id="phone" name="phone" class="form-input" maxlength="20"
+                               value="<?= h($me['phone'] ?? '') ?>">
                     </div>
                     <div class="form-group">
                         <label for="nickname" class="form-label">表示名</label>

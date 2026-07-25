@@ -127,28 +127,31 @@ function currentUserId(){
     return (int)($_SESSION['user_id'] ?? 0);
 }
 
-//電話番号の確認が済んでいるか（セッションに持っている値で判定する）
-function isPhoneVerified(){
-    return (int)($_SESSION['phone_verified'] ?? 0) === 1;
+//メールアドレスの確認が済んでいるか（セッションに持っている値で判定する）
+function isEmailVerified(){
+    return (int)($_SESSION['email_verified'] ?? 0) === 1;
 }
 
-//電話番号の確認が済んでいないと使えないページの先頭で呼ぶ
+//メールアドレスの確認が済んでいないと使えないページの先頭で呼ぶ
 //  loginCheck() の後に置くこと。
-//  ※確認コードの入力画面（verify_phone.php）自体では呼ばないこと。呼ぶと無限に往復する。
+//  ※確認コードの入力画面（verify_email.php）自体では呼ばないこと。呼ぶと無限に往復する。
 function verifyCheck(){
-    if (!isPhoneVerified()) {
-        header('Location: verify_phone.php');
+    if (!isEmailVerified()) {
+        header('Location: verify_email.php');
         exit;
     }
 }
 
 // ======================================================
-// 電話番号のSMS認証（確認コードの発行と照合）
+// メールアドレスの本人確認（確認コードの発行と照合）
+//
+// 登録したメールアドレス宛に6桁の確認コードを送り、入力できて初めて利用開始とする。
+// ※電話番号によるSMS認証も sms.php に残してある（2段階認証として後から足せる）。
 // ======================================================
 
 const VERIFY_CODE_TTL      = 600; //確認コードの有効期間（秒）＝10分
 const VERIFY_MAX_ATTEMPTS  = 5;   //1つのコードに対する入力ミスの上限
-const VERIFY_MAX_SENDS     = 5;   //1時間あたりの送信回数の上限（SMSは1通ごとに課金される）
+const VERIFY_MAX_SENDS     = 5;   //1時間あたりの送信回数の上限（送信の乱用を防ぐ）
 
 //6桁の確認コードを作る
 //  rand()ではなく random_int() を使う。予測されると本人確認の意味がなくなるため。
@@ -156,9 +159,9 @@ function makeVerifyCode(){
     return str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 }
 
-//確認コードを発行してSMSで送る
+//確認コードを発行してメールで送る
 //  戻り値: ['ok' => bool, 'error' => string]
-function issueVerifyCode(PDO $pdo, $userId, $phone){
+function issueVerifyCode(PDO $pdo, $userId, $email){
     //1. 直近1時間の送信回数を数える（送りすぎを止める）
     $stmt = $pdo->prepare('SELECT send_count, sent_at FROM gs_verify_code WHERE user_id = :id');
     $stmt->bindValue(':id', $userId, PDO::PARAM_INT);
@@ -192,10 +195,15 @@ function issueVerifyCode(PDO $pdo, $userId, $phone){
     $save->execute();
 
     //3. 送信する。送れなかった場合は正直にそう返す
-    require_once __DIR__ . '/sms.php';
-    $body = '【積読ストック】確認コード: ' . $code . "\n10分以内に入力してください。";
-    if (!sendSms($phone, $body)) {
-        return ['ok' => false, 'error' => 'SMSの送信に失敗しました。番号をご確認のうえ、もう一度お試しください。'];
+    require_once __DIR__ . '/mailer.php';
+    $subject = '【積読ストック】確認コード ' . $code;
+    $body    = "積読ストックのご登録ありがとうございます。\n\n"
+             . "確認コード： {$code}\n\n"
+             . "画面に入力すると、ご利用を開始できます。\n"
+             . "このコードは10分間有効です。\n\n"
+             . "※このメールに心当たりがない場合は、破棄してください。\n";
+    if (!sendMail($email, $subject, $body)) {
+        return ['ok' => false, 'error' => 'メールの送信に失敗しました。アドレスをご確認のうえ、もう一度お試しください。'];
     }
     return ['ok' => true, 'error' => ''];
 }
@@ -228,7 +236,7 @@ function checkVerifyCode(PDO $pdo, $userId, $input){
     }
 
     //4. 一致した。確認済みにして、使い終わったコードは消す
-    $done = $pdo->prepare('UPDATE gs_user_table SET phone_verified = 1 WHERE id = :id');
+    $done = $pdo->prepare('UPDATE gs_user_table SET email_verified = 1 WHERE id = :id');
     $done->bindValue(':id', $userId, PDO::PARAM_INT);
     $done->execute();
 
@@ -280,12 +288,17 @@ function isValidEmail($email){
         && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
+//入力を「半角数字だけ」に整える
+//  「090-1234-5678」→「09012345678」、「１２３４５６」→「123456」
+//  電話番号と確認コードの両方で使う
+function normalizeDigits($value){
+    $value = mb_convert_kana((string)$value, 'n'); //全角数字→半角
+    return preg_replace('/[^0-9]/', '', $value);   //数字以外を除去
+}
+
 //電話番号をハイフン・空白抜きの数字だけに整える
-//  「090-1234-5678」「090 1234 5678」→「09012345678」
-//  全角数字も半角に直してから処理する
 function normalizePhone($phone){
-    $phone = mb_convert_kana($phone, 'n');       //全角数字→半角
-    return preg_replace('/[^0-9]/', '', $phone); //数字以外を除去
+    return normalizeDigits($phone);
 }
 
 //日本の携帯・固定電話として妥当か（0で始まる10〜11桁）

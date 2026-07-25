@@ -4,20 +4,26 @@ require_once('funcs.php');
 loginCheck(); //ログインは必要。ただし verifyCheck() は呼ばない（呼ぶとこの画面自体に来られない）
 
 //すでに確認済みなら本棚へ
-if (isPhoneVerified()) {
+if (isEmailVerified()) {
     header('Location: index.php');
     exit;
 }
 
-//表示用に自分の電話番号を取り出す
+//表示用に自分のメールアドレスを取り出す
 $pdo  = db_conn();
-$stmt = $pdo->prepare('SELECT phone FROM gs_user_table WHERE id = :id');
+$stmt = $pdo->prepare('SELECT email FROM gs_user_table WHERE id = :id');
 $stmt->bindValue(':id', currentUserId(), PDO::PARAM_INT);
 $stmt->execute();
-$phone = (string)$stmt->fetchColumn();
+$email = (string)$stmt->fetchColumn();
 
-//番号の下4桁だけ見せる（肩越しに画面を覗かれても番号が分からないように）
-$masked = $phone === '' ? '' : str_repeat('*', max(0, strlen($phone) - 4)) . substr($phone, -4);
+//アドレスの一部を伏せて表示する（肩越しに画面を覗かれても全体が分からないように）
+//  example@gmail.com → ex*****@gmail.com
+$masked = $email;
+if (strpos($email, '@') !== false) {
+    [$local, $domain] = explode('@', $email, 2);
+    $head   = mb_substr($local, 0, 2);
+    $masked = $head . str_repeat('*', max(1, mb_strlen($local) - 2)) . '@' . $domain;
+}
 
 $error  = takeFlash('verify_error', '');
 $notice = takeFlash('verify_notice', '');
@@ -28,7 +34,7 @@ $notice = takeFlash('verify_notice', '');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 積読ストック - 電話番号の確認</title>
+    <title>📚 積読ストック - メールアドレスの確認</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
@@ -57,9 +63,9 @@ $notice = takeFlash('verify_notice', '');
     <!-- メインコンテンツ -->
     <main class="main-container form-page">
         <div class="form-card">
-            <h1 class="form-title">📱 電話番号の確認</h1>
+            <h1 class="form-title">📧 メールアドレスの確認</h1>
             <p class="form-subtitle">
-                <?= h($masked) ?> 宛にSMSで6桁の確認コードを送りました。<br>
+                <?= h($masked) ?> 宛に6桁の確認コードを送りました。<br>
                 コードを入力すると、ご利用を開始できます。
             </p>
 
@@ -93,12 +99,13 @@ $notice = takeFlash('verify_notice', '');
             <form method="POST" action="resend_act.php" class="resend-form">
                 <?= csrfField() ?>
                 <button type="submit" class="link-btn">
-                    <i class="fas fa-rotate-right"></i> コードが届かない場合は再送信する
+                    <i class="fas fa-rotate-right"></i> メールが届かない場合は再送信する
                 </button>
             </form>
 
             <p class="form-cancel">
-                番号を間違えましたか？ <a href="mypage.php">アカウント設定</a> から変更できます。
+                迷惑メールフォルダもご確認ください。<br>
+                アドレスを間違えましたか？ <a href="mypage.php">アカウント設定</a> から変更できます。
             </p>
         </div>
     </main>
