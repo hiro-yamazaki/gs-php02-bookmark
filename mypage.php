@@ -162,11 +162,12 @@ $notice = takeFlash('mypage_notice', '');
             <section class="settings-section settings-section--danger">
                 <h2 class="settings-title"><i class="fas fa-triangle-exclamation"></i> 退会する</h2>
                 <p class="settings-warning">
-                    退会すると、登録した本 <strong><?= $bookCount ?></strong> 件を含むすべてのデータが削除されます。
-                    <strong>元に戻すことはできません。</strong>
+                    退会すると、登録した本 <strong><?= $bookCount ?></strong> 件を含むすべてのデータが利用できなくなります。<br>
+                    <strong>退会後 <?= WITHDRAW_GRACE_DAYS ?> 日以内</strong>であれば、同じメールアドレスとパスワードでログインして復元できます。<br>
+                    <?= WITHDRAW_GRACE_DAYS ?> 日を過ぎるとすべて完全に削除され、<strong>元に戻すことはできません。</strong>
                 </p>
                 <form method="POST" action="withdraw_act.php"
-                      onsubmit="return confirm('本当に退会しますか？\n登録したデータはすべて削除され、元に戻せません。')">
+                      onsubmit="return confirm('本当に退会しますか？\n<?= WITHDRAW_GRACE_DAYS ?>日以内ならログインして復元できます。')">
                     <?= csrfField() ?>
                     <div class="form-group">
                         <label for="confirm_pw" class="form-label">確認のためパスワードを入力してください</label>
@@ -175,7 +176,7 @@ $notice = takeFlash('mypage_notice', '');
                     <div class="form-group">
                         <label class="form-check">
                             <input type="checkbox" name="agree" value="1" required>
-                            <span>データが完全に削除されることに同意します</span>
+                            <span><?= WITHDRAW_GRACE_DAYS ?>日後にデータが完全に削除されることに同意します</span>
                         </label>
                     </div>
                     <button type="submit" class="submit-btn submit-btn--danger">

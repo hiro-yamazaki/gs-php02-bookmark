@@ -44,10 +44,11 @@ if ((int)$me['kanri_flg'] === 1) {
     }
 }
 
-//3. アカウントを削除する
-//   ブックマークは gs_bm_table の外部キーが ON DELETE CASCADE なので
-//   このDELETE 1本で一緒に消える（消し忘れが起きない）。
-$del = $pdo->prepare('DELETE FROM gs_user_table WHERE id = :id');
+//3. 論理削除する（この時点ではデータは消さない）
+//   deleted_at を入れるだけ。以降アプリからは在籍していない扱いになり、
+//   公開していた本も「みんなの本棚」から消える。
+//   実際の消去は、猶予期間の経過後に purge.php が行う。
+$del = $pdo->prepare('UPDATE gs_user_table SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL');
 $del->bindValue(':id', $uid, PDO::PARAM_INT);
 
 try {
@@ -57,7 +58,12 @@ try {
     exit('退会処理でエラーが発生しました。時間をおいてお試しください。');
 }
 
-//4. セッションを破棄してお別れ画面へ
+//4. 使いかけの確認コードは残さない（退会後に本人確認が通る余地をなくす）
+$clean = $pdo->prepare('DELETE FROM gs_verify_code WHERE user_id = :id');
+$clean->bindValue(':id', $uid, PDO::PARAM_INT);
+$clean->execute();
+
+//5. セッションを破棄してお別れ画面へ
 logoutSession();
 header('Location: login.php?withdrawn=1');
 exit;

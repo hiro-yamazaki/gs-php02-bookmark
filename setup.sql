@@ -28,6 +28,9 @@ USE gs_bookmark_db;
 --                    0の間は本棚を使えず、確認コードの入力画面に留まる
 --   kanri_flg      : 管理者フラグ（1=管理者, 0=一般）
 --   created_at     : 登録日時
+--   deleted_at     : 退会日時。NULLなら在籍中（論理削除）
+--                    アプリは「deleted_at IS NULL の人だけ」を対象に動く。
+--                    一定期間の経過後、purge.php が物理削除する。
 CREATE TABLE IF NOT EXISTS gs_user_table (
   id INT(12) NOT NULL AUTO_INCREMENT,
   email VARCHAR(255) NOT NULL,
@@ -37,9 +40,22 @@ CREATE TABLE IF NOT EXISTS gs_user_table (
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
   kanri_flg INT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
+  deleted_at DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uq_email (email),
-  UNIQUE KEY uq_phone (phone)
+  UNIQUE KEY uq_phone (phone),
+  KEY idx_deleted (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 退会の記録（個人を特定できる情報は持たない）
+--   「いつ・何日使って・何冊貯めていたか」だけを残す。ユーザーIDも保存しない。
+--   purge.php が物理削除する直前に1行書き込む。
+CREATE TABLE IF NOT EXISTS gs_withdrawal_log (
+  id INT(12) NOT NULL AUTO_INCREMENT,
+  used_days INT(6) NOT NULL,
+  book_count INT(6) NOT NULL,
+  withdrawn_at DATETIME NOT NULL,
+  PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. サンプルユーザー（パスワードは password_hash() でハッシュ化済み・平文では保存しない）

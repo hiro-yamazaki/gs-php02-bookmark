@@ -56,7 +56,11 @@ $withdrawn  = isset($_GET['withdrawn']); //退会が完了した
             <?php elseif ($loggedOut): ?>
                 <p class="login-notice"><i class="fas fa-circle-check"></i> ログアウトしました。</p>
             <?php elseif ($withdrawn): ?>
-                <p class="login-notice"><i class="fas fa-circle-check"></i> 退会が完了しました。ご利用ありがとうございました。</p>
+                <p class="login-notice">
+                    <i class="fas fa-circle-check"></i>
+                    退会が完了しました。ご利用ありがとうございました。<br>
+                    <?= WITHDRAW_GRACE_DAYS ?>日以内であれば、同じメールアドレスとパスワードでログインすると復元できます。
+                </p>
             <?php endif; ?>
 
             <form method="POST" action="login_act.php">

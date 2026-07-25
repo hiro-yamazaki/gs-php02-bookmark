@@ -23,6 +23,7 @@ $scope = ($_GET['scope'] ?? 'mine') === 'public' ? 'public' : 'mine';
 //アカウント作成直後・電話番号の確認直後だけメッセージを出す
 $welcome  = isset($_GET['welcome']);
 $verified = isset($_GET['verified']);
+$restored = isset($_GET['restored']);
 
 //3. データ取得SQL作成（新しい順）
 //   検索時は 書籍名 or コメント の部分一致（授業で習ったLIKE検索）
@@ -36,8 +37,10 @@ try {
   } else {
     $scopeSql = 'b.user_id = :uid';
   }
-  //持ち主の表示名を出したいので gs_user_table と結合する
-  $sql = "SELECT b.*, u.nickname AS owner_name FROM gs_bm_table b JOIN gs_user_table u ON u.id = b.user_id WHERE {$scopeSql}";
+  //持ち主の表示名を出したいので gs_user_table と結合する。
+  //  結合条件に deleted_at IS NULL を入れるのが要点。
+  //  これが無いと、退会した人が公開していた本が「みんなの本棚」に残り続ける。
+  $sql = "SELECT b.*, u.nickname AS owner_name FROM gs_bm_table b JOIN gs_user_table u ON u.id = b.user_id AND u.deleted_at IS NULL WHERE {$scopeSql}";
   if ($q !== '') {
     $sql .= " AND (b.book_name LIKE :q OR b.book_comment LIKE :q)";
   }
@@ -165,7 +168,9 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
     <!-- メインコンテンツ -->
     <main class="main-container">
-        <?php if ($verified): ?>
+        <?php if ($restored): ?>
+            <p class="login-notice"><i class="fas fa-circle-check"></i> アカウントを復元しました。登録していた本もそのまま残っています。</p>
+        <?php elseif ($verified): ?>
             <p class="login-notice"><i class="fas fa-circle-check"></i> 電話番号を確認しました。さっそく1冊目を積んでみましょう。</p>
         <?php elseif ($welcome): ?>
             <p class="login-notice"><i class="fas fa-circle-check"></i> アカウントを作成しました。さっそく1冊目を積んでみましょう。</p>

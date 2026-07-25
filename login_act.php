@@ -33,7 +33,25 @@ try {
 //4. 実行後の処理（該当ユーザー1件を取得）
 $val = $stmt->fetch(PDO::FETCH_ASSOC);
 
-//5. ユーザーが存在し、かつ入力パスワードがハッシュと一致したらログイン成功
+//5. 退会済みアカウントの扱い
+//   パスワードが合っている場合だけ判定する。
+//   先に判定すると「そのアドレスは退会済み」と外部に教えることになるため。
+if ($val && password_verify($lpw, $val['lpw']) && $val['deleted_at'] !== null) {
+    $limit = strtotime($val['deleted_at']) + WITHDRAW_GRACE_DAYS * 86400;
+    if (time() > $limit) {
+        //猶予期間を過ぎている（purge.php がまだ動いていないだけ）→ ログインさせない
+        header('Location: login.php?err=1');
+        exit;
+    }
+    //猶予期間内。まだログインさせず、復元するかどうかを確認する
+    session_regenerate_id(true);
+    $_SESSION['restore_user_id'] = (int)$val['id'];
+    $_SESSION['restore_deadline'] = $limit;
+    header('Location: restore.php');
+    exit;
+}
+
+//6. ユーザーが存在し、かつ入力パスワードがハッシュと一致したらログイン成功
 if ($val && password_verify($lpw, $val['lpw'])) {
     //セッションIDを作り替え、その値を「鍵」としてサーバー側に保存する
     //（同じIDがレスポンスでブラウザにも渡り、サーバーとブラウザで共有される）
