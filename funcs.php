@@ -42,17 +42,60 @@ function db_conn(){
 // ※これらを呼ぶページは、先頭で session_start() を実行しておくこと
 // ======================================================
 
+//ログインの有効期限（最終操作からの秒数）。これを過ぎたら自動ログアウトする
+const LOGIN_TIMEOUT = 1800; //30分
+
+//ログイン中ページをブラウザ／プロキシにキャッシュさせない
+//  ログアウト後に「戻る」ボタンで中身が再表示されるのを防ぐ。
+//  ※PHPの既定（session.cache_limiter=nocache）でも同等のヘッダーは出るが、
+//    サーバーのphp.ini設定に左右されないようここで明示する。
+function nocache(){
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
+//有効期限切れかどうか（最終操作からLOGIN_TIMEOUT秒経過したか）
+//  last_activityが無い場合も「切れている」扱いにする（安全側に倒す）
+function isSessionExpired(){
+    return !isset($_SESSION['last_activity'])
+        || (time() - $_SESSION['last_activity']) > LOGIN_TIMEOUT;
+}
+
+//セッションを完全に破棄する（ログアウトと有効期限切れの共通処理）
+function logoutSession(){
+    $_SESSION = [];
+    //セッションクッキーも無効化する（鍵をブラウザからも消す）
+    if (ini_get('session.use_cookies')) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+    }
+    session_destroy();
+}
+
 //ログインチェック（ログインが必要なページの先頭で呼ぶ）
 //  未ログイン、またはブラウザとサーバーのセッションIDが一致しない場合は
 //  ログイン画面へ戻す（＝ログインしていないと中身は見られない）
 function loginCheck(){
+    //① 未ログイン（シークレットウィンドウ・URL直打ちを含む）→ ログイン画面へ戻す
     if (!isset($_SESSION['chk_ssid']) || $_SESSION['chk_ssid'] !== session_id()) {
         header('Location: login.php');
+        exit; //exitを忘れると以降のHTMLが出力され、中身が見えてしまう
+    }
+    //② 一定時間操作がなければ自動ログアウト（セッションの有効期限切れ）
+    if (isSessionExpired()) {
+        logoutSession();
+        header('Location: login.php?timeout=1');
         exit;
     }
-    //正しいログイン中は、毎回セッションIDを作り替えて盗用（セッションハイジャック）に備える
-    session_regenerate_id(true);
-    $_SESSION['chk_ssid'] = session_id();
+    //③ 操作があったので有効期限を延長する
+    $_SESSION['last_activity'] = time();
+
+    //④ ログイン中のページはキャッシュさせない
+    nocache();
+    //※セッションIDの再生成はログイン成功時（login_act.php）だけで行う。
+    //  ここで毎回作り替えると、複数タブや戻るボタン操作で古いIDが無効化され、
+    //  意図しないログアウトが起きるため。
 }
 
 //管理者チェック（loginCheck()の後に呼ぶ。kanri_flg=1以外は一覧へ戻す）
@@ -65,8 +108,11 @@ function adminCheck(){
 }
 
 //ログイン中かどうかを返す（リダイレクトはしない。画面の出し分け用）
+//  有効期限が切れていればログイン中とみなさない
 function isLoggedIn(){
-    return isset($_SESSION['chk_ssid']) && $_SESSION['chk_ssid'] === session_id();
+    return isset($_SESSION['chk_ssid'])
+        && $_SESSION['chk_ssid'] === session_id()
+        && !isSessionExpired();
 }
 
 //管理者としてログイン中かどうかを返す（削除ボタンの出し分け用）

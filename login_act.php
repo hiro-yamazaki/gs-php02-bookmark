@@ -40,6 +40,8 @@ if ($val && password_verify($lpw, $val['lpw'])) {
     //権限分岐に使うため、管理者フラグとログインIDもセッションに持たせる
     $_SESSION['kanri_flg'] = (int)$val['kanri_flg'];
     $_SESSION['lid']       = $val['lid'];
+    //有効期限の起点。以降は loginCheck() が操作のたびに更新する
+    $_SESSION['last_activity'] = time();
     header('Location: select.php');
     exit;
 } else {

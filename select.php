@@ -1,12 +1,12 @@
 <?php
 session_start();
 require_once('funcs.php');
+loginCheck(); //一覧もログインしていない人には見せない（ログイン必要ページ）
 
-//ログイン状態を判定（一覧はログイン不要で見られるが、状態で表示を出し分ける）
-$loggedIn = isLoggedIn();
-$admin    = isAdmin();
-//「登録へ」の遷移先：ログイン中は登録フォーム、未ログインはログイン画面へ
-$addHref  = $loggedIn ? 'index.php' : 'login.php';
+//削除ボタンの出し分けに使う（管理者だけに表示する）
+$admin   = isAdmin();
+//「登録へ」の遷移先（ここまで来ている＝ログイン済みなので登録フォームへ）
+$addHref = 'index.php';
 
 //1. DB接続（funcs.phpの共通関数。ローカル/本番はconfig.phpの有無で切替）
 $pdo = db_conn();
@@ -54,11 +54,10 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $view .= '<div class="data-content">'.nl2br(h($result['book_comment'])).'</div>';
   }
   $view .= '<div class="data-url"><i class="fas fa-link"></i> <a href="'.h($result['book_url']).'" target="_blank" rel="noopener noreferrer">'.h($result['book_url']).'</a></div>';
-  // 編集・削除ボタン（ログイン状態で出し分け）
-  //   ・編集：ログイン中のユーザーに表示
+  // 編集・削除ボタン
+  //   ・編集：ログイン中のユーザーに表示（このページはログイン必須）
   //   ・削除：管理者(kanri_flg=1)だけに表示（権限分岐）。誤操作防止に確認ダイアログを挟む
-  //   ・未ログイン：操作ボタンは出さず、閲覧のみにする
-  if ($loggedIn) {
+  {
     $view .= '<div class="data-actions">';
     $view .= '<a href="detail.php?id='.(int)$result['id'].'" class="edit-btn"><i class="fas fa-pen"></i> 編集</a>';
     if ($admin) {
@@ -106,28 +105,21 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>
-            <?php if ($loggedIn): ?>
-                <div class="nav-actions">
-                    <span class="nav-user">
-                        <i class="fas fa-user-circle"></i>
-                        <?= h($_SESSION['lid'] ?? '') ?>さん
-                        <?php if ($admin): ?><span class="nav-badge">管理者</span><?php endif; ?>
-                    </span>
-                    <a href="index.php" class="nav-link">
-                        <i class="fas fa-plus"></i>
-                        ブックマーク登録
-                    </a>
-                    <a href="logout.php" class="nav-link nav-link--ghost">
-                        <i class="fas fa-right-from-bracket"></i>
-                        ログアウト
-                    </a>
-                </div>
-            <?php else: ?>
-                <a href="login.php" class="nav-link">
-                    <i class="fas fa-right-to-bracket"></i>
-                    ログイン
+            <div class="nav-actions">
+                <span class="nav-user">
+                    <i class="fas fa-user-circle"></i>
+                    <?= h($_SESSION['lid'] ?? '') ?>さん
+                    <?php if ($admin): ?><span class="nav-badge">管理者</span><?php endif; ?>
+                </span>
+                <a href="index.php" class="nav-link">
+                    <i class="fas fa-plus"></i>
+                    ブックマーク登録
                 </a>
-            <?php endif; ?>
+                <a href="logout.php" class="nav-link nav-link--ghost">
+                    <i class="fas fa-right-from-bracket"></i>
+                    ログアウト
+                </a>
+            </div>
         </div>
     </header>
 
@@ -191,10 +183,10 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
         </div>
     </main>
 
-    <!-- ページ間ナビ（←でブックマーク登録へ。未ログイン時はログイン画面へ誘導） -->
+    <!-- ページ間ナビ（←でブックマーク登録へ） -->
     <a href="<?= $addHref ?>" class="page-nav page-nav--left" aria-label="ブックマーク登録へ戻る">
         <span class="page-nav-circle"><i class="fas fa-chevron-left"></i></span>
-        <span class="page-nav-label"><?= $loggedIn ? '登録へ' : 'ログイン' ?></span>
+        <span class="page-nav-label">登録へ</span>
     </a>
 
     <script>

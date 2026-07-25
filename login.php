@@ -8,8 +8,13 @@ if (isLoggedIn()) {
     exit;
 }
 
-//直前のログインに失敗して ?err=1 で戻ってきたか
-$loginError = isset($_GET['err']);
+//ログイン画面はキャッシュさせない
+nocache();
+
+//どういう理由でこの画面に来たかを判定してメッセージを出し分ける
+$loginError = isset($_GET['err']);     //ID/パスワードが違う
+$timedOut   = isset($_GET['timeout']); //一定時間操作がなく自動ログアウトされた
+$loggedOut  = isset($_GET['logout']);  //自分でログアウトした
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -34,10 +39,6 @@ $loginError = isset($_GET['err']);
                 <i class="fas fa-book-bookmark"></i>
                 積読ストック
             </a>
-            <a href="select.php" class="nav-link">
-                <i class="fas fa-list"></i>
-                積読を見る
-            </a>
         </div>
     </header>
 
@@ -45,10 +46,14 @@ $loginError = isset($_GET['err']);
     <main class="main-container form-page">
         <div class="form-card">
             <h1 class="form-title">🔑 ログイン</h1>
-            <p class="form-subtitle">登録・編集・削除にはログインが必要です。</p>
+            <p class="form-subtitle">ご利用にはログインが必要です。</p>
 
             <?php if ($loginError): ?>
                 <p class="login-error"><i class="fas fa-circle-exclamation"></i> ログインIDまたはパスワードが違います。</p>
+            <?php elseif ($timedOut): ?>
+                <p class="login-error"><i class="fas fa-clock"></i> 一定時間操作がなかったため、自動的にログアウトしました。もう一度ログインしてください。</p>
+            <?php elseif ($loggedOut): ?>
+                <p class="login-notice"><i class="fas fa-circle-check"></i> ログアウトしました。</p>
             <?php endif; ?>
 
             <form method="POST" action="login_act.php">
@@ -68,7 +73,9 @@ $loginError = isset($_GET['err']);
                 </button>
             </form>
 
-            <!-- 動作確認用アカウント（採点・レビュー用のメモ。実運用ではこの表示は消す） -->
+            <!-- 動作確認用アカウント（採点・レビュー用のメモ）
+                 TODO: 一般公開する前に必ずこのブロックごと削除する。
+                       残したままだと、誰でもログインできてしまう。 -->
             <div class="login-hint">
                 <p class="login-hint-title"><i class="fas fa-circle-info"></i> 動作確認用アカウント</p>
                 <ul>
@@ -79,11 +86,7 @@ $loginError = isset($_GET['err']);
         </div>
     </main>
 
-    <!-- ページ間ナビ（→で積読ストックへ・ログイン不要で見られる） -->
-    <a href="select.php" class="page-nav page-nav--right" aria-label="積読ストックを見る">
-        <span class="page-nav-circle"><i class="fas fa-chevron-right"></i></span>
-        <span class="page-nav-label">積読を見る</span>
-    </a>
+    <!-- ログインしないと一覧は見られないので、ここにはページ間ナビを置かない -->
 </body>
 
 </html>
