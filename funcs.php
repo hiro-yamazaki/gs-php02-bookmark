@@ -103,7 +103,7 @@ function loginCheck(){
 //  Phase 3 のユーザー管理画面（管理者専用ページ）で使う。
 function adminCheck(){
     if ((int)($_SESSION['kanri_flg'] ?? 0) !== 1) {
-        header('Location: select.php');
+        header('Location: index.php');
         exit;
     }
 }
@@ -125,4 +125,82 @@ function isAdmin(){
 //  ブックマークの持ち主を判定する基準になる。0が返るのは未ログイン時のみ。
 function currentUserId(){
     return (int)($_SESSION['user_id'] ?? 0);
+}
+
+// ======================================================
+// CSRF対策（Phase 2で追加）
+// 「本人が意図してこのフォームから送った」ことを確認する仕組み。
+// これが無いと、別サイトに置かれた <form action="退会URL"> を踏ませるだけで
+// ログイン中の利用者のアカウントを消せてしまう。
+// ======================================================
+
+//このセッション用のトークンを返す（無ければ作る）
+function csrfToken(){
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+//フォームに埋め込む hidden タグを出力する
+function csrfField(){
+    return '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">';
+}
+
+//POSTを受け取る側で呼ぶ。合わなければその場で処理を止める
+//  hash_equals は「1文字ずつ比較して途中で抜けない」比較関数（タイミング攻撃対策）
+function csrfCheck(){
+    $sent = (string)($_POST['csrf_token'] ?? '');
+    if ($sent === '' || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $sent)) {
+        http_response_code(400);
+        exit('不正なリクエストです。前の画面に戻ってやり直してください。');
+    }
+}
+
+// ======================================================
+// 入力チェック（アカウント登録・変更で共通に使う）
+// ======================================================
+
+//メールアドレスとして妥当か
+function isValidEmail($email){
+    return $email !== ''
+        && mb_strlen($email) <= 255
+        && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+//電話番号をハイフン・空白抜きの数字だけに整える
+//  「090-1234-5678」「090 1234 5678」→「09012345678」
+//  全角数字も半角に直してから処理する
+function normalizePhone($phone){
+    $phone = mb_convert_kana($phone, 'n');       //全角数字→半角
+    return preg_replace('/[^0-9]/', '', $phone); //数字以外を除去
+}
+
+//日本の携帯・固定電話として妥当か（0で始まる10〜11桁）
+function isValidPhone($phone){
+    return preg_match('/\A0\d{9,10}\z/', $phone) === 1;
+}
+
+//パスワードとして妥当か
+//  短すぎるものを弾く。8文字以上、英字と数字の両方を含むこと。
+function isValidPassword($pw){
+    return mb_strlen($pw) >= 8
+        && mb_strlen($pw) <= 100
+        && preg_match('/[a-zA-Z]/', $pw) === 1
+        && preg_match('/[0-9]/', $pw) === 1;
+}
+
+//入力エラーを次の画面まで持ち回すための入れ物
+//  リダイレクト先で takeFlash() すると1回だけ取り出せて消える
+function setFlash($key, $value){
+    $_SESSION['flash'][$key] = $value;
+}
+
+function takeFlash($key, $default = null){
+    if (!isset($_SESSION['flash'][$key])) {
+        return $default;
+    }
+    $value = $_SESSION['flash'][$key];
+    unset($_SESSION['flash'][$key]);
+    return $value;
 }

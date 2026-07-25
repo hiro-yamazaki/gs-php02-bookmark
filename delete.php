@@ -8,14 +8,15 @@ loginCheck(); //ログインしていない人は削除できない（ログイ�
 //POSTデータ取得（削除ボタン以外から開かれた場合は一覧へ戻す）
 //※DBの中身を書き換える処理なのでGETではなくPOSTで受ける
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
+csrfCheck();
 
 //idは数字のみ許可（hiddenはデベロッパーツールで書き換えられる前提で検証する）
 $id = $_POST['id'] ?? '';
 if (!ctype_digit($id)) {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -45,6 +46,6 @@ if ($status === false) {
     $error = $stmt->errorInfo();
     exit('ErrorMessage:' . print_r($error, true));
 } else {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }

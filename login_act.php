@@ -8,18 +8,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+csrfCheck();
+
 //POST値を受け取る
-$lid = trim($_POST['lid'] ?? '');
-$lpw = (string)($_POST['lpw'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$lpw   = (string)($_POST['lpw'] ?? '');
 
 //1. DB接続（funcs.phpの共通関数）
 $pdo = db_conn();
 
 //2. SQL作成
 //   パスワードはハッシュ化して保存しているのでWHEREでは直接比較できない。
-//   まず lid だけでユーザーを1件検索し、パスワードは後で password_verify で照合する。
-$stmt = $pdo->prepare('SELECT * FROM gs_user_table WHERE lid = :lid');
-$stmt->bindValue(':lid', $lid, PDO::PARAM_STR);
+//   まずメールアドレスでユーザーを1件検索し、パスワードは後で password_verify で照合する。
+$stmt = $pdo->prepare('SELECT * FROM gs_user_table WHERE email = :email');
+$stmt->bindValue(':email', $email, PDO::PARAM_STR);
 
 //3. 実行（PHP8はSQLエラー時に例外が飛ぶのでcatchする）
 try {
@@ -37,17 +39,19 @@ if ($val && password_verify($lpw, $val['lpw'])) {
     //（同じIDがレスポンスでブラウザにも渡り、サーバーとブラウザで共有される）
     session_regenerate_id(true);
     $_SESSION['chk_ssid']  = session_id();
-    //権限分岐に使うため、管理者フラグとログインIDもセッションに持たせる
+    //権限分岐に使うため、管理者フラグと表示名もセッションに持たせる
     $_SESSION['kanri_flg'] = (int)$val['kanri_flg'];
-    $_SESSION['lid']       = $val['lid'];
+    $_SESSION['nickname']  = $val['nickname'];
     //ブックマークの持ち主判定に使うユーザーID（gs_user_table.id）
     $_SESSION['user_id']   = (int)$val['id'];
     //有効期限の起点。以降は loginCheck() が操作のたびに更新する
     $_SESSION['last_activity'] = time();
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 } else {
-    //ログイン失敗（該当なし or パスワード不一致）→ ログイン画面へ
+    //ログイン失敗 → ログイン画面へ
+    //  「メールアドレスが存在しない」と「パスワードが違う」を区別せず同じ扱いにする。
+    //  分けて返すと、外部から会員の有無を調べられてしまうため。
     header('Location: login.php?err=1');
     exit;
 }

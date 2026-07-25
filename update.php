@@ -3,11 +3,12 @@ session_start();
 require_once('funcs.php');
 loginCheck(); //ログインしていない人は更新処理をさせない（ログイン必要ページ）
 
-//POSTデータ取得（フォーム以外から開かれた場合は一覧へ戻す）
+//POSTデータ取得（フォーム以外から開かれた場合は本棚へ戻す）
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
+csrfCheck();
 
 $id           = $_POST['id'] ?? '';
 $book_name    = trim($_POST['book_name'] ?? '');
@@ -19,7 +20,7 @@ $is_public    = isset($_POST['is_public']) ? 1 : 0;
 
 //idは数字のみ許可（hiddenはデベロッパーツールで書き換えられる前提で検証する）
 if (!ctype_digit($id)) {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -68,6 +69,6 @@ if ($status === false) {
     $error = $stmt->errorInfo();
     exit('ErrorMessage:' . print_r($error, true));
 } else {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }

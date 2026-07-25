@@ -2,9 +2,9 @@
 session_start();
 require_once('funcs.php');
 
-//すでにログイン済みなら一覧へ（ログイン画面を二重に見せない）
+//すでにログイン済みなら本棚へ（ログイン画面を二重に見せない）
 if (isLoggedIn()) {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -12,9 +12,10 @@ if (isLoggedIn()) {
 nocache();
 
 //どういう理由でこの画面に来たかを判定してメッセージを出し分ける
-$loginError = isset($_GET['err']);     //ID/パスワードが違う
-$timedOut   = isset($_GET['timeout']); //一定時間操作がなく自動ログアウトされた
-$loggedOut  = isset($_GET['logout']);  //自分でログアウトした
+$loginError = isset($_GET['err']);       //メールアドレス/パスワードが違う
+$timedOut   = isset($_GET['timeout']);   //一定時間操作がなく自動ログアウトされた
+$loggedOut  = isset($_GET['logout']);    //自分でログアウトした
+$withdrawn  = isset($_GET['withdrawn']); //退会が完了した
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -49,17 +50,21 @@ $loggedOut  = isset($_GET['logout']);  //自分でログアウトした
             <p class="form-subtitle">ご利用にはログインが必要です。</p>
 
             <?php if ($loginError): ?>
-                <p class="login-error"><i class="fas fa-circle-exclamation"></i> ログインIDまたはパスワードが違います。</p>
+                <p class="login-error"><i class="fas fa-circle-exclamation"></i> メールアドレスまたはパスワードが違います。</p>
             <?php elseif ($timedOut): ?>
                 <p class="login-error"><i class="fas fa-clock"></i> 一定時間操作がなかったため、自動的にログアウトしました。もう一度ログインしてください。</p>
             <?php elseif ($loggedOut): ?>
                 <p class="login-notice"><i class="fas fa-circle-check"></i> ログアウトしました。</p>
+            <?php elseif ($withdrawn): ?>
+                <p class="login-notice"><i class="fas fa-circle-check"></i> 退会が完了しました。ご利用ありがとうございました。</p>
             <?php endif; ?>
 
             <form method="POST" action="login_act.php">
+                <?= csrfField() ?>
+
                 <div class="form-group">
-                    <label for="lid" class="form-label"><i class="fas fa-user"></i> ログインID</label>
-                    <input type="text" id="lid" name="lid" class="form-input" placeholder="例：admin" required autofocus>
+                    <label for="email" class="form-label"><i class="fas fa-envelope"></i> メールアドレス</label>
+                    <input type="email" id="email" name="email" class="form-input" placeholder="例：you@example.com" required autofocus>
                 </div>
 
                 <div class="form-group">
@@ -73,14 +78,18 @@ $loggedOut  = isset($_GET['logout']);  //自分でログアウトした
                 </button>
             </form>
 
+            <p class="form-cancel">
+                アカウントをお持ちでない方は <a href="signup.php">アカウント作成</a>
+            </p>
+
             <!-- 動作確認用アカウント（採点・レビュー用のメモ）
                  TODO: 一般公開する前に必ずこのブロックごと削除する。
                        残したままだと、誰でもログインできてしまう。 -->
             <div class="login-hint">
                 <p class="login-hint-title"><i class="fas fa-circle-info"></i> 動作確認用アカウント</p>
                 <ul>
-                    <li>管理者：<code>admin</code> / <code>admin1234</code>（登録・編集・削除まで可）</li>
-                    <li>一般：<code>user</code> / <code>user1234</code>（登録・編集は可／削除は不可）</li>
+                    <li>管理者：<code>admin@example.com</code> / <code>admin1234</code></li>
+                    <li>一般：<code>user@example.com</code> / <code>user1234</code></li>
                 </ul>
             </div>
         </div>

@@ -6,7 +6,7 @@ loginCheck(); //ログインしていない人は編集画面を見られない�
 //一覧から ?id=◯ で編集対象を受け取る（数字以外・未指定は一覧へ戻す）
 $id = $_GET['id'] ?? '';
 if (!ctype_digit($id)) {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -30,7 +30,7 @@ try {
 //4. 実行後の処理（対象データがなければ一覧へ戻す）
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 if ($result === false) {
-    header('Location: select.php');
+    header('Location: index.php');
     exit;
 }
 ?>
@@ -60,10 +60,10 @@ if ($result === false) {
             <div class="nav-actions">
                 <span class="nav-user">
                     <i class="fas fa-user-circle"></i>
-                    <?= h($_SESSION['lid'] ?? '') ?>さん
+                    <?= h($_SESSION['nickname'] ?? '') ?>さん
                     <?php if (isAdmin()): ?><span class="nav-badge">管理者</span><?php endif; ?>
                 </span>
-                <a href="select.php" class="nav-link">
+                <a href="index.php" class="nav-link">
                     <i class="fas fa-list"></i>
                     積読を見る
                 </a>
@@ -83,6 +83,7 @@ if ($result === false) {
 
             <!-- 更新対象のidはhiddenで送る（画面には出さない） -->
             <form method="POST" action="update.php">
+                <?= csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int)$result['id'] ?>">
                 <!-- 表紙画像URLは編集画面では変更しないので、既存の値をそのまま持ち回す -->
                 <input type="hidden" name="book_image" value="<?= h($result['image_url'] ?? '') ?>">
@@ -124,7 +125,7 @@ if ($result === false) {
             </form>
 
             <p class="form-cancel">
-                <a href="select.php"><i class="fas fa-arrow-left"></i> 変更せずに一覧へ戻る</a>
+                <a href="index.php"><i class="fas fa-arrow-left"></i> 変更せずに本棚へ戻る</a>
             </p>
         </div>
     </main>

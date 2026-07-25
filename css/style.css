@@ -115,6 +115,82 @@ body {
     font-size: 0.9rem;
 }
 
+/* エラーを複数まとめて出すときの箇条書き */
+.error-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    list-style: disc;
+}
+
+.error-list li + li {
+    margin-top: 0.25rem;
+}
+
+/* アカウント設定：現在の登録内容 */
+.account-info {
+    display: grid;
+    grid-template-columns: minmax(7rem, auto) 1fr;
+    gap: 0.5rem 1rem;
+    margin: 0 0 2rem;
+    padding: 1rem 1.25rem;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 12px;
+    font-size: 0.9rem;
+}
+
+.account-info dt {
+    color: #888;
+}
+
+.account-info dd {
+    margin: 0;
+    word-break: break-all;
+}
+
+/* アカウント設定：セクション区切り */
+.settings-section {
+    margin-top: 2.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.settings-title {
+    font-size: 1.05rem;
+    margin: 0 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* 退会など、取り返しがつかない操作のブロック */
+.settings-section--danger .settings-title {
+    color: #b02a37;
+}
+
+.settings-warning {
+    background: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: #8c2230;
+}
+
+.submit-btn--danger {
+    background: #dc3545;
+}
+
+.submit-btn--danger:hover {
+    background: #b02a37;
+}
+
+/* 統合ページ：カードを縦に並べる間隔 */
+.main-container > .content-card + .content-card {
+    margin-top: 1.75rem;
+}
+
 /* 表示範囲の切り替えタブ（マイ本棚／みんなの本棚） */
 .scope-tabs {
     display: flex;

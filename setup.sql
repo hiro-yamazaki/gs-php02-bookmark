@@ -1,7 +1,9 @@
 -- ============================================
--- 課題: 本をブックマークするDB
--- DB作成 + テーブル作成 + サンプルデータ
+-- 積読ストック：DB作成 + テーブル作成 + サンプルデータ
 -- phpMyAdminのSQLタブに貼り付けて実行してもOK
+--
+-- ※すでに動いているDBを更新する場合はこのファイルではなく
+--   migrate_phase1.sql → migrate_phase2.sql の順に実行すること。
 -- ============================================
 
 -- 1. DB作成（好きなDB名で新規作成）
@@ -16,26 +18,37 @@ USE gs_bookmark_db;
 -- ユーザーテーブル（gs_bm_table から参照するので先に作る）
 -- ============================================
 -- 2. ユーザーテーブル作成（Table名: gs_user_table）
---   id        : ユニーク値（int / PRIMARY / AUTO_INCREMENT）
---   lid       : ログインID（varchar 32 / 重複禁止）
---   lpw       : パスワード（password_hash()のハッシュ値を保存 / varchar 255）
---   kanri_flg : 管理者フラグ（1=管理者, 0=一般）
+--   id             : ユニーク値（int / PRIMARY / AUTO_INCREMENT）
+--   email          : ログインに使うメールアドレス（重複禁止）
+--   phone          : 電話番号。ハイフンなしの数字だけで保存する（重複禁止）
+--   lpw            : パスワード（password_hash()のハッシュ値を保存 / varchar 255）
+--   nickname       : 画面に表示する名前（本名でなくてよい）
+--   phone_verified : 電話番号のSMS認証が済んでいるか（1=済 / 0=未）
+--                    ※SMS送信の実装は後のフェーズ。今は登録時に0のまま入る
+--   kanri_flg      : 管理者フラグ（1=管理者, 0=一般）
+--   created_at     : 登録日時
 CREATE TABLE IF NOT EXISTS gs_user_table (
   id INT(12) NOT NULL AUTO_INCREMENT,
-  lid VARCHAR(32) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
   lpw VARCHAR(255) NOT NULL,
+  nickname VARCHAR(32) NOT NULL,
+  phone_verified TINYINT(1) NOT NULL DEFAULT 0,
   kanri_flg INT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_lid (lid)
+  UNIQUE KEY uq_email (email),
+  UNIQUE KEY uq_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. サンプルユーザー（パスワードは password_hash() でハッシュ化済み・平文では保存しない）
---    admin / admin1234  … 管理者
---    user  / user1234   … 一般
+--    admin@example.com / admin1234 … 管理者
+--    user@example.com  / user1234  … 一般
 --    ※ハッシュは bcrypt。別のパスワードにしたい場合は自分でハッシュを作り直して差し替える。
-INSERT INTO gs_user_table (lid, lpw, kanri_flg) VALUES
-('admin', '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 1),
-('user',  '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 0);
+--    ※一般公開する前にこの2件は必ず削除すること。
+INSERT INTO gs_user_table (email, phone, lpw, nickname, phone_verified, kanri_flg, created_at) VALUES
+('admin@example.com', '09000000001', '$2y$12$mfiv1GcAJxE0ipBKqpRFTeTW7H4lqHxJ5jBxMFlJTVOCZucJYgALW', 'admin', 1, 1, NOW()),
+('user@example.com',  '09000000002', '$2y$12$NC27aUWoEc76WHSgnNisLuP45Uv3Y8Sg.2XQTIK05MixIhZW.Dl4a', 'user',  1, 0, NOW());
 
 -- ============================================
 -- ブックマークテーブル

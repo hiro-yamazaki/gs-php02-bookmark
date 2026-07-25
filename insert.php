@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
 }
+csrfCheck();
 
 $book_name    = trim($_POST['book_name'] ?? '');
 $book_url     = trim($_POST['book_url'] ?? '');
