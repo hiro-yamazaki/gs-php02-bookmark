@@ -125,7 +125,7 @@ while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📚 積読ストック</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link href="css/style.css?v=20260728" rel="stylesheet">
     <script>
         // 表紙が読み込めない・実体がない(1x1画像)場合は📚プレースホルダーに切り替える
         function coverFail(img) {

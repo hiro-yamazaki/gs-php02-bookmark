@@ -20,7 +20,7 @@ if (isLoggedIn()) {
     <title>📚 積読ストック - 積んだ本を、資産に</title>
     <meta name="description" content="気になった本をその場でストック。積読を見える化して、次の一冊を決められるサービスです。">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link href="css/style.css?v=20260728" rel="stylesheet">
 </head>
 
 <body>

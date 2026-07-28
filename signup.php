@@ -22,7 +22,7 @@ $old    = takeFlash('signup_old', []);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📚 積読ストック - アカウント作成</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link href="css/style.css?v=20260728" rel="stylesheet">
 </head>
 
 <body>

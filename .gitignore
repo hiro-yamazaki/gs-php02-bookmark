@@ -1,5 +1,11 @@
 # 本番DB接続情報（公開リポジトリに載せない）
 config.php
 
+# 本番DBのバックアップ（パスワードハッシュを含むので絶対に公開しない）
+backup_*.sql
+
+# 本番サーバー用の移行SQL（実メールアドレスを含むためローカル限定）
+migrate_server.sql
+
 # macOS
 .DS_Store
